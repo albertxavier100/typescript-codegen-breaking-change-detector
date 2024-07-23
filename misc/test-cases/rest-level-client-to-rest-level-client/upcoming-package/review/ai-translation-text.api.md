@@ -4,6 +4,7 @@
 
 ```ts
 
+
 import { Client } from '@azure-rest/core-client';
 import { ClientOptions } from '@azure-rest/core-client';
 import { HttpResponse } from '@azure-rest/core-client';
@@ -642,5 +643,9 @@ export interface TransliterationLanguageOutput {
 }
 
 // (No @packageDocumentation comment for this package)
+
+const x : string = "";
+function test() {}
+test()
 
 ```
