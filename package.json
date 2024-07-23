@@ -1,5 +1,5 @@
 {
-  "name": "ts-eslint-parser-playground",
+  "name": "typescript-codegen-breaking-change-detector",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,8 +9,6 @@
     "start:dev": "tsx watch src/index.ts",
     "start": "npm run build && node build/index.js",
     "test": "vitest",
-    "test:e2e:hlc2mc": "tsx watch src/index.ts --latest-package-root ./src/tests/e2e/cases/high-level-client-to-modular-client/latest-package --upcoming-package-root ./src/tests/e2e/cases/high-level-client-to-modular-client/upcoming-package",
-    "test:e2e:rlc2rlc": "tsx watch src/index.ts --latest-package-root ./src/tests/e2e/cases/rest-level-client-to-rest-level-client/latest-package --upcoming-package-root ./src/tests/e2e/cases/rest-level-client-to-rest-level-client/upcoming-package",
     "lint": "eslint . --ext .ts  --max-warnings=0",
     "prettier-format": "run-script-os",
     "prettier-format:win32": "prettier --config .prettierrc \"./src/**/*.ts\" --write",
@@ -19,7 +17,7 @@
     "prettier-watch": "run-script-os",
     "prettier-watch:win32": "onchange \"src/**/*.ts\" -- prettier --write {{changed}}",
     "prettier-watch:darwin:linux": "onchange 'src/**/*.ts' -- prettier --write {{changed}}",
-    "prettier-watch:default": "onchange 'src/**/*.ts' -- prettier --write {{changed}}",
+    "prettier-watch:default": "onchange 'src/**/*.ts' -- prettier --write {{changed}}"
   },
   "author": "",
   "license": "MIT",
@@ -28,7 +26,9 @@
     "@typescript-eslint/types": "^7.13.0",
     "@typescript-eslint/typescript-estree": "^7.13.1",
     "@typescript-eslint/utils": "^7.13.1",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "pino": "^9.3.1",
+    "pino-pretty": "^11.2.1"
   },
   "devDependencies": {
     "@azure-rest/core-client": "^2.0.0",
