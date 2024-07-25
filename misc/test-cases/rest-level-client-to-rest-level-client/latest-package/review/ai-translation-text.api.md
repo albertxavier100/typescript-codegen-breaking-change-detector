@@ -167,7 +167,8 @@ export interface FindSentenceBoundariesQueryParamProperties {
 
 // @public (undocumented)
 export interface GetLanguages {
-    get(options?: GetLanguagesParameters): StreamableMethod<GetLanguages200Response | GetLanguagesDefaultResponse>;
+    get(optionsAxxx?: GetLanguagesParameters): StreamableMethod<GetLanguages200Response | GetLanguagesDefaultResponse>;
+
 }
 
 // @public (undocumented)

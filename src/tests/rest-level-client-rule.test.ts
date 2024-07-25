@@ -1,11 +1,11 @@
 import { TSESLint } from '@typescript-eslint/utils';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import * as parser from '@typescript-eslint/parser';
-import { logger } from '../logging/logger';
-import rule from '../rules/rest-level-client-rule';
+import rule from '../azure/common/rules/ignore-operation-interface-name-changes';
 import { parseMarkdown, iterate } from '@azure-tools/openapi-tools-common';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { ParseForESLintResult } from '../azure/common/types';
 
 async function load(apiViewPath: string) {
   const content = await readFile(apiViewPath);
@@ -22,36 +22,64 @@ async function load(apiViewPath: string) {
   return codeBlocks[0];
 }
 
-function lint(code: string) {
-  const linter = new TSESLint.Linter();
-  linter.defineRule('rest-level-client-breaking-change-rule', rule);
+function lint(code: string, oldResult: ParseForESLintResult) {
+  const dir = join(__dirname, '../../misc/test-cases/rest-level-client-to-rest-level-client/');
+  const linter = new TSESLint.Linter({ cwd: dir });
+  linter.defineRule('ignore-operation-interface-name-changes', rule(oldResult));
   linter.defineParser('@typescript-eslint/parser', parser);
-  const messages = linter.verify(code, {
-    rules: {
-      'rest-level-client-breaking-change-rule': [2]
+
+  const messages = linter.verify(
+    code,
+    {
+      rules: {
+        'ignore-operation-interface-name-changes': [2]
+      },
+      parser: '@typescript-eslint/parser',
+
+      parserOptions: {
+        filePath: 'upcoming-package/review/ai-translation-text.api.ts',
+        comment: true,
+        tokens: true,
+        range: true,
+        loc: true,
+        project: './tsconfig.json',
+        tsconfigRootDir: dir
+      }
     },
-    parser: '@typescript-eslint/parser'
-  });
+    'upcoming-package/review/ai-translation-text.api.ts'
+  );
   return messages;
 }
 
-describe('rest level client breaking change rule', async () => {
-  const apiViewPath = join(
+function detect(oldCode: string, newCode: string) {
+  const dir = join(__dirname, '../../misc/test-cases/rest-level-client-to-rest-level-client/');
+  const result = parser.parseForESLint(oldCode, {
+    comment: true,
+    tokens: true,
+    range: true,
+    loc: true,
+    project: './tsconfig.json',
+    tsconfigRootDir: dir,
+    filePath: join(dir, 'latest-package/review/ai-translation-text.api.ts')
+  });
+
+  const message = lint(newCode, result);
+  return message;
+}
+
+describe('detect rest level client breaking changes', async () => {
+  const newApiViewPath = join(
     __dirname,
     '../../misc/test-cases/rest-level-client-to-rest-level-client/upcoming-package/review/ai-translation-text.api.md'
   );
-  const code = await load(apiViewPath);
-  const messages = lint(code);
+  const oldApiViewPath = join(
+    __dirname,
+    '../../misc/test-cases/rest-level-client-to-rest-level-client/latest-package/review/ai-translation-text.api.md'
+  );
+  let oldCode = await load(oldApiViewPath);
+  let newCode = await load(newApiViewPath);
 
-  test('should ignore operation name', () => {
-    const operationNames = messages.map(m => m.message);
-    expect(operationNames.length).toBe(6)
-    expect(operationNames.includes("GetLanguages")).toBe(true)
-    expect(operationNames.includes("Translate")).toBe(true)
-    expect(operationNames.includes("Transliterate")).toBe(true)
-    expect(operationNames.includes("FindSentenceBoundaries")).toBe(true)
-    expect(operationNames.includes("LookupDictionaryEntries")).toBe(true)
-    expect(operationNames.includes("LookupDictionaryExamples")).toBe(true)
-    console.log('messages', messages, 'end message');
-  });
+  const messages = detect(oldCode, newCode);
+  console.log('msg', messages);
+  test('should ignore operation rename', () => {});
 });

@@ -167,7 +167,7 @@ export interface FindSentenceBoundariesQueryParamProperties {
 }
 
 // @public (undocumented)
-export interface GetLanguages {
+export interface GetLanguagesUpcoming {
     get(options?: GetLanguagesParameters): StreamableMethod<GetLanguages200Response | GetLanguagesDefaultResponse>;
 }
 
@@ -393,7 +393,7 @@ export interface LookupDictionaryExamplesQueryParamProperties {
 
 // @public (undocumented)
 export interface Routes {
-    (path: "/languages"): GetLanguages;
+    (path: "/languages"): GetLanguagesUpcoming;
     (path: "/translate"): Translate;
     (path: "/transliterate"): Transliterate;
     (path: "/breaksentence"): FindSentenceBoundaries;
@@ -643,9 +643,4 @@ export interface TransliterationLanguageOutput {
 }
 
 // (No @packageDocumentation comment for this package)
-
-const x : string = "";
-function test() {}
-test()
-
 ```

@@ -7,5 +7,5 @@
       "@azure-rest/ai-translation-text": ["./src/index"]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "samples-dev/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "samples-dev/**/*.ts", "review/**/*.ts"]
 }
