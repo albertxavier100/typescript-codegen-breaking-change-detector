@@ -33,7 +33,7 @@ function findOperationsContextInRLC(scopeManager: Scope.ScopeManager | null): Ma
   });
   const map = operationContexts.reduce((map, op) => {
     op.path = removePathParameter(op.path);
-    map.set(op.path, op);
+    map.set(op.path, { node: op.node, name: op.name, pathExludeParameters: op.path });
     return map;
   }, new Map<string, OperationContext>());
   return map;

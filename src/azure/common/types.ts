@@ -28,6 +28,6 @@ export interface CreateOperationRule {
 
 export interface OperationContext {
   name: string;
-  path: string;
+  pathExludeParameters: string;
   node: TSESTree.TSInterfaceDeclaration;
 }
