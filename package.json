@@ -32,10 +32,11 @@
     "commander": "^12.1.0",
     "fs-extra": "^11.2.0",
     "marked": "^13.0.2",
-    "pino": "^9.3.1",
-    "pino-pretty": "^11.2.1",
+    "ts-morph": "^23.0.0",
     "typescript": "5.5.3",
-    "typescript-eslint": "^7.17.0"
+    "typescript-eslint": "^7.17.0",
+    "pino": "^9.3.1",
+    "pino-pretty": "^11.2.1"
   },
   "devDependencies": {
     "@azure-rest/core-client": "^2.0.0",

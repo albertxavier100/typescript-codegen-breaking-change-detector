@@ -1,7 +1,8 @@
 import { TSESLint } from '@typescript-eslint/utils';
 import { describe, test } from 'vitest';
 import * as parser from '@typescript-eslint/parser';
-import rule from '../azure/common/rules/ignore-operation-interface-name-changes';
+import ignoreOperationInterfaceNameChangesRule from '../azure/common/rules/ignore-operation-interface-name-changes';
+import ignoreRequestParameterModelNameChangesRule from '../azure/common/rules/ignore-request-parameter-model-name-changes';
 import { join } from 'node:path';
 import { ParseForESLintResult } from '../azure/common/types';
 import { mkdirp, pathExists } from 'fs-extra/esm';
@@ -107,7 +108,8 @@ async function parseBaselinePackage(projectContext: ProjectContext): Promise<Par
 async function detectBreakingChanges(projectContext: ProjectContext): Promise<TSESLint.Linter.LintMessage[]> {
   const baselineParsed = await parseBaselinePackage(projectContext);
   const linter = new TSESLint.Linter({ cwd: projectContext.root });
-  linter.defineRule('ignore-operation-interface-name-changes', rule(baselineParsed));
+  linter.defineRule('ignore-operation-interface-name-changes', ignoreOperationInterfaceNameChangesRule(baselineParsed));
+  linter.defineRule('ignore-request-parameter-model-name-changes', ignoreRequestParameterModelNameChangesRule(baselineParsed));
   linter.defineParser('@typescript-eslint/parser', parser);
   console.log('projectContext.current.relativeFilePath', projectContext.current.relativeFilePath);
   const messages = linter.verify(
@@ -115,6 +117,7 @@ async function detectBreakingChanges(projectContext: ProjectContext): Promise<TS
     {
       rules: {
         'ignore-operation-interface-name-changes': [2],
+        'ignore-request-parameter-model-name-changes': [2],
       },
       parser: '@typescript-eslint/parser',
       parserOptions: {

@@ -1,9 +1,23 @@
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
+const devStream = pretty({
+  colorize: false,
+  levelFirst: true,
+  translateTime: 'yyyy-dd-mm, h:MM:ss TT',
+  destination: 'logs/app.log',
+  append: false,
+});
+
 const stream = pretty({
-  colorize: true
+  colorize: false,
+  levelFirst: true,
+  translateTime: 'yyyy-dd-mm, h:MM:ss TT',
+  destination: 'logs/app.log',
+  append: false,
 });
 
 // TODO: make logger configurable
-export const logger = pino({ level: 'info' }, stream);
+export const devFileLogger = pino({}, devStream);
+
+export const logger = pino({}, stream);
