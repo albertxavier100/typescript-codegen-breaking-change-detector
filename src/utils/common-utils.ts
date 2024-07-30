@@ -1,3 +1,6 @@
+import chalk from 'chalk';
+import util from 'util';
+
 export function AreSameSets<T>(set1: Set<T>, set2: Set<T>): boolean {
   if (set1.size !== set2.size) {
     return false;
@@ -10,6 +13,15 @@ export function AreSameSets<T>(set1: Set<T>, set2: Set<T>): boolean {
   return true;
 }
 
-export function devConsolelog(message?: any, ...optionalParams: any[]): void {
-  console.dir([message, ...optionalParams], { depth: null, colors: true });
+// IMPORTANT: dev with chakrounanas.turbo-console-log vscode extension
+export function devConsolelog(title?: any, ...optionalParams: any[]): void {
+  const start = '💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎';
+  const end = '📍📍📍📍📍📍📍📍📍📍📍📍📍📍📍📍📍';
+  const body = util.inspect(optionalParams, { depth: null, colors: true });
+  console.log(start);
+  console.log(title);
+  console.log(start);
+  console.log(body);
+  console.log(end);
+  console.log();
 }
