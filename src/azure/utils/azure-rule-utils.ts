@@ -11,7 +11,7 @@ export function createOperationRuleListener(
   id: string,
   createListener: (context: RuleContext<string, readonly unknown[]>) => RuleListener
 ) {
-  const messages = { default: '{{message}}' };
+  const messages = { default: '' };
   const defaultOptions: ReadonlyArray<unknown> = [];
   const rule = createRule({
     name: id,

@@ -73,10 +73,15 @@ export interface RuleMessageContext<TMessage extends RuleMessage> {
 }
 
 export interface RuleMessage {
+  id: string;
   type: 'request' | 'response' | 'operation';
 }
 
 export interface RenameMessage extends RuleMessage {
   from: string;
   to: string;
+}
+
+export interface LinterSettings {
+  report(message: RuleMessage): void;
 }

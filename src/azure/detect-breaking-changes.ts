@@ -1,11 +1,11 @@
 import * as parser from '@typescript-eslint/parser';
 
+import { ParseForESLintResult, RuleMessage } from './common/types';
 import { Renderer, marked } from 'marked';
 import { basename, join, posix, relative } from 'node:path';
 import { exists, outputFile, readFile, remove } from 'fs-extra';
 
 import { Linter } from '@typescript-eslint/utils/ts-eslint';
-import { ParseForESLintResult } from './common/types';
 import { TSESLint } from '@typescript-eslint/utils';
 import { devConsolelog } from '../utils/common-utils';
 import { glob } from 'glob';
@@ -105,10 +105,9 @@ async function parseBaselinePackage(projectContext: ProjectContext): Promise<Par
   return result;
 }
 
-async function detectBreakingChangesCore(
-  projectContext: ProjectContext
-): Promise<TSESLint.Linter.LintMessage[] | undefined> {
+async function detectBreakingChangesCore(projectContext: ProjectContext): Promise<RuleMessage[] | undefined> {
   try {
+    const breakingChangeResults: RuleMessage[] = [];
     const baselineParsed = await parseBaselinePackage(projectContext);
     const linter = new TSESLint.Linter({ cwd: projectContext.root });
     linter.defineRule(
@@ -122,7 +121,7 @@ async function detectBreakingChangesCore(
     linter.defineRule('ignore-response-model-name-changes', ignoreResponseModelNameChangesRule(baselineParsed));
     linter.defineParser('@typescript-eslint/parser', parser);
     console.log('projectContext.current.relativeFilePath', projectContext.current.relativeFilePath);
-    const messages = linter.verify(
+    linter.verify(
       projectContext.current.code,
       {
         // TODO: add warning if order is incorrect
@@ -141,10 +140,15 @@ async function detectBreakingChangesCore(
           project: './tsconfig.json',
           tsconfigRootDir: projectContext.root,
         },
+        settings: {
+          report: (message: RuleMessage) => {
+            breakingChangeResults.push(message);
+          },
+        },
       },
       projectContext.current.relativeFilePath
     );
-    return messages;
+    return breakingChangeResults;
   } catch (err) {
     logger.error(`Failed to detect breaking changes due to ${(err as Error).stack ?? err}`);
     return undefined;
@@ -156,7 +160,7 @@ export async function detectBreakingChangesBetweenPackages(
   currentPackageFolder: string | undefined,
   tempFolder: string | undefined,
   cleanUpAtTheEnd: boolean
-): Promise<Map<string, Linter.LintMessage[] | undefined>> {
+): Promise<Map<string, RuleMessage[] | undefined>> {
   if (!baselinePackageFolder) {
     throw new Error(`Failed to use undefined or null baseline package folder`);
   }
@@ -180,7 +184,7 @@ export async function detectBreakingChangesBetweenPackages(
       const messages = await detectBreakingChangesCore(projectContext);
       return { name: apiViewBasename, messages };
     });
-    const messagesMap = new Map<string, Linter.LintMessage[] | undefined>();
+    const messagesMap = new Map<string, RuleMessage[] | undefined>();
     const promises = messsagesPromises.map(async (p) => {
       const result = await p;
       messagesMap.set(result.name, result.messages);

@@ -1,4 +1,4 @@
-import { CreateOperationRule, ParseForESLintResult } from '../types';
+import { CreateOperationRule, ParseForESLintResult, RenameMessage } from '../types';
 import { RuleListener, getParserServices } from '@typescript-eslint/utils/eslint-utils';
 import { getGlobalScope, isNodeTypeAssignableTo } from '../../../utils/ast-utils';
 import { getOperationContexsFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils';
@@ -7,7 +7,7 @@ import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { TSESTree } from '@typescript-eslint/types';
 import { createOperationRuleListener } from '../../utils/azure-rule-utils';
 import { ignoreOperationInterfaceNameChanges } from '../../../common/models/rules/rule-ids';
-import { renameRuleMessageConverter } from '../../../common/models/rules/rule-messages';
+import { getReport } from '../../../utils/common-utils';
 
 const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) => {
   const baselineOperationContexts = getOperationContexsFromEsParseResult(baselineParsedResult);
@@ -53,12 +53,12 @@ const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) =
             if (value.node !== node) {
               continue;
             }
-            const message = renameRuleMessageConverter.stringify({
+            getReport(context)(<RenameMessage>{
+              id: ignoreOperationInterfaceNameChanges,
               from: value.from,
               to: value.to,
               type: 'operation',
             });
-            context.report({ messageId: 'default', node, data: { message } });
             return;
           }
         },

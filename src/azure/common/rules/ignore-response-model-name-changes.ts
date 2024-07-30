@@ -1,4 +1,4 @@
-import { CreateOperationRule, OperationPair, ParseForESLintResult } from '../types';
+import { CreateOperationRule, OperationPair, ParseForESLintResult, RenameMessage } from '../types';
 import { getOperationPairsWithSamePath, getRenamedResponseTypeNameMap } from '../../utils/azure-operation-utils';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
@@ -6,7 +6,7 @@ import { RuleListener } from '@typescript-eslint/utils/eslint-utils';
 import { createOperationRuleListener } from '../../utils/azure-rule-utils';
 import { getOperationContexsFromEsParseResult } from '../../utils/azure-ast-utils';
 import { ignoreResponseModelNameChanges } from '../../../common/models/rules/rule-ids';
-import { renameRuleMessageConverter } from '../../../common/models/rules/rule-messages';
+import { getReport } from '../../../utils/common-utils';
 
 function getRenamedResponsePairs(operationPairs: OperationPair[]) {
   const renamedList = operationPairs.map((operationPair) => {
@@ -41,12 +41,12 @@ const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) =
             if (renamed.renamedResponses) {
               renamed.renamedResponses.forEach((apiPairs) => {
                 apiPairs.forEach((apiPair) => {
-                  const message = renameRuleMessageConverter.stringify({
+                  getReport(context)(<RenameMessage>{
+                    id: ignoreResponseModelNameChanges,
                     from: apiPair.baseline,
                     to: apiPair.current,
                     type: 'response',
                   });
-                  context.report({ messageId: 'default', node, data: { message } });
                 });
               });
             }

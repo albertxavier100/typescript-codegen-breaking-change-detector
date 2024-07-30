@@ -1,3 +1,5 @@
+import { LinterSettings } from '../azure/common/types';
+import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import util from 'util';
 
 export function AreSameSets<T>(set1: Set<T>, set2: Set<T>): boolean {
@@ -21,4 +23,8 @@ export function devConsolelog(title?: any, ...optionalParams: any[]): void {
   console.log(body);
   console.log(end, 'END  :', title, end);
   console.log();
+}
+
+export function getReport(context: RuleContext<string, readonly unknown[]>) {
+  return (context.settings as any as LinterSettings)!.report;
 }
