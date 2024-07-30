@@ -1,7 +1,7 @@
 import { CreateOperationRule, OperationContext, ParseForESLintResult } from '../types';
 import { RuleListener, getParserServices } from '@typescript-eslint/utils/eslint-utils';
 import { getGlobalScope, isNodeTypeAssignableTo } from '../../../utils/ast-utils';
-import { getServiceFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils';
+import { getOperationContexsFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { createOperationRuleListener } from '../../utils/azure-rule-utils';
@@ -9,7 +9,7 @@ import { ignoreOperationInterfaceNameChanges } from '../../../common/config/rule
 
 // TODO: decouple with RLC?
 const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) => {
-  const baselineOperationContexts = getServiceFromEsParseResult(baselineParsedResult);
+  const baselineOperationContexts = getOperationContexsFromEsParseResult(baselineParsedResult);
 
   return createOperationRuleListener(
     ignoreOperationInterfaceNameChanges,

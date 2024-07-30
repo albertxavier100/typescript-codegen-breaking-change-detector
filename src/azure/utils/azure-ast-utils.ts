@@ -1,4 +1,4 @@
-import { ApiContext, OperationContext, ParseForESLintResult } from '../common/types';
+import { ApiContext, OperationContext, ParseForESLintResult, RequestDetail } from '../common/types';
 import { InterfaceDeclaration, MethodSignature, SourceFile, SyntaxKind, createWrappedNode } from 'ts-morph';
 import { ParserServicesWithTypeInformation, TSESTree, TSESTree as t } from '@typescript-eslint/utils';
 import {
@@ -98,6 +98,17 @@ function getApiParameterDeclarations(api: MethodSignature): InterfaceDeclaration
   );
   // IMPORTANT: only consider intersaction type, which is the same as current tool
   const parameterIntersectionType = coreParamInterface.getFirstChildByKindOrThrow(SyntaxKind.IntersectionType);
+
+  // TODO: get the actual properties
+  // const parametersTypes = parameterIntersectionType.getType().getProperties();
+  // parametersTypes.forEach((p) => {
+  //   console.log('xxxxxp', p.getName());
+  //   p.getDeclarations().map((d) => {
+  //       //...
+  //     });
+  //   return
+  // });
+
   const parameterTypes = parameterIntersectionType.getTypeNodes();
   // IMPORTANT: only consider 1 depth, which is the same as current tool
   const parameterNamesWithoutImport = parameterTypes
@@ -107,9 +118,11 @@ function getApiParameterDeclarations(api: MethodSignature): InterfaceDeclaration
     })
     .map((t) => t.getText());
   // IMPORTANT: only consider interfaces
+  // TODO: support for features like extend
   const parameterDeclarations = parameterNamesWithoutImport.map((n) => {
     const declaration = findDeclarationInGlobalScope(n, SyntaxKind.InterfaceDeclaration, sourceFile);
-    return declaration.asKindOrThrow(SyntaxKind.InterfaceDeclaration);
+    const decl = declaration.asKindOrThrow(SyntaxKind.InterfaceDeclaration);
+    return decl;
   });
   return parameterDeclarations;
 }
@@ -118,7 +131,7 @@ function getApiParameterDeclarations(api: MethodSignature): InterfaceDeclaration
 // export interface GetLanguages {
 //  get(options?: GetLanguagesParameters): StreamableMethod<GetLanguages200Response | GetLanguagesDefaultResponse>;
 // }
-function getApiResponseDeclarations(api: MethodSignature) {
+function getApiResponseDeclarations(api: MethodSignature): Map<string, InterfaceDeclaration> {
   const returnType = api.getReturnTypeNodeOrThrow();
   const sourceFile = api.getSourceFile();
 
@@ -142,10 +155,13 @@ function getApiResponseDeclarations(api: MethodSignature) {
     })
     .map((t) => t.getText());
   // IMPORTANT: only consider interfaces
-  const responseDeclarations = responseNamesWithoutImport.map((n) => {
+  // TODO: support for features like extend
+  const responseDeclarations = responseNamesWithoutImport.reduce((map, n) => {
     const declaration = findDeclarationInGlobalScope(n, SyntaxKind.InterfaceDeclaration, sourceFile);
-    return declaration.asKindOrThrow(SyntaxKind.InterfaceDeclaration);
-  });
+    const decl = declaration.asKindOrThrow(SyntaxKind.InterfaceDeclaration);
+    map.set(n, decl);
+    return map;
+  }, new Map<string, InterfaceDeclaration>());
 
   return responseDeclarations;
 }
@@ -158,23 +174,31 @@ export function getApiContexts(operation: InterfaceDeclaration) {
   const apis = operation.getMembers().map((m) => m.asKindOrThrow(SyntaxKind.MethodSignature));
   const apiContexts = apis.reduce((map, api) => {
     const name = api.getStructure().name;
-    const parameters = getApiParameterDeclarations(api);
-    const responses = getApiResponseDeclarations(api);
-    const apiContext = { name, parameters, responses };
+    // TODO: add name
+    const parameterTypes = getApiParameterDeclarations(api);
+    const responseTypes = getApiResponseDeclarations(api);
+    const apiContext = <ApiContext>{ name, partialParameterTypes: parameterTypes, responseTypes };
     map.set(name, apiContext);
     return map;
   }, new Map<string, ApiContext>());
   return apiContexts;
 }
 
-export function convertOperationToMorphNode(operation: OperationContext, service: ParserServicesWithTypeInformation) {
-  const tsNode = service.esTreeNodeToTSNodeMap.get(operation.node);
-  const typeChecker = service.program.getTypeChecker();
-  const moNode = createWrappedNode(tsNode, { typeChecker });
-  return moNode;
+export function getRequestParametersInfo(partOfRequestParameter: InterfaceDeclaration): RequestDetail[] {
+  const properties = partOfRequestParameter.getStructure().properties;
+  if (!properties) {
+    return [{ name: undefined, type: undefined }];
+  }
+  const info = properties.map((p) => {
+    if (typeof p.type === 'string') {
+      return { name: p.name, type: p.type };
+    }
+    return { name: p.name, type: undefined };
+  });
+  return info;
 }
 
-export function getServiceFromEsParseResult(result: ParseForESLintResult) {
+export function getOperationContexsFromEsParseResult(result: ParseForESLintResult) {
   const service = result.services;
   if (!isParseServiceWithTypeInfo(service)) {
     throw new Error(`Failed to get ParserServicesWithTypeInformation. It indicates the parser configuration is wrong.`);

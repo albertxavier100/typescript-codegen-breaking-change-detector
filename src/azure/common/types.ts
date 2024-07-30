@@ -33,10 +33,36 @@ export interface OperationContext {
   pathExludeParameters: string;
   node: TSESTree.TSInterfaceDeclaration;
   apis: Map<string, ApiContext>;
+  apiDetails?: Map<string, ApiDetail>;
 }
 
+/* e.g. API: get(options?: GetLanguagesParameters): StreamableMethod<GetLanguages200Response | GetLanguagesDefaultResponse>;
+ */
 export interface ApiContext {
   name: string;
-  parameters: InterfaceDeclaration[];
-  responses: InterfaceDeclaration[];
+  // e.g. [GetLanguagesQueryParam, GetLanguagesHeaderParam, RequestParameters]
+  partialParameterTypes: InterfaceDeclaration[];
+  // e.g. [GetLanguages200Response, GetLanguagesDefaultResponse]
+  responseTypes: Map<string, InterfaceDeclaration>;
+}
+
+export interface RequestDetail {
+  name: string | undefined;
+  type: string | undefined;
+}
+
+export interface ApiDetail {
+  parameters: RequestDetail[];
+  responseTypes: string[];
+}
+
+export interface OperationPair {
+  path: string;
+  baseline: OperationContext;
+  current: OperationContext;
+}
+
+export interface RenamePair {
+  baseline: string;
+  current: string;
 }

@@ -222,6 +222,8 @@ export type GetLanguagesParameters = GetLanguagesQueryParam & GetLanguagesHeader
 export interface GetLanguagesQueryParam {
     // (undocumented)
     queryParameters?: GetLanguagesQueryParamProperties;
+    testFunc(s:string): number
+    hehe: (c:number)=> string
 }
 
 // @public (undocumented)

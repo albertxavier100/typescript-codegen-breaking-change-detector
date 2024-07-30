@@ -168,7 +168,7 @@ export interface FindSentenceBoundariesQueryParamProperties {
 
 // @public (undocumented)
 export interface GetLanguagesUpcoming {
-    get(options?: GetLanguagesParameters): StreamableMethod<GetLanguages200Response | GetLanguagesDefaultResponse>;
+    get(options?: GetLanguagesParametersAAAAAAA): StreamableMethod<GetLanguages200Response_Change | GetLanguagesDefaultResponse>;
 }
 
 // @public (undocumented)
@@ -178,7 +178,7 @@ export interface GetLanguages200Headers {
 }
 
 // @public
-export interface GetLanguages200Response extends HttpResponse {
+export interface GetLanguages200Response_Change extends HttpResponse {
     // (undocumented)
     body: GetLanguagesResultOutput;
     // (undocumented)
@@ -216,16 +216,20 @@ export interface GetLanguagesHeaders {
 }
 
 // @public (undocumented)
-export type GetLanguagesParameters = GetLanguagesQueryParam & GetLanguagesHeaderParam & RequestParameters;
+export type GetLanguagesParametersAAAAAAA = GetLanguagesQueryParamAAA & GetLanguagesHeaderParam & RequestParameters;
 
 // @public (undocumented)
-export interface GetLanguagesQueryParam {
+export interface GetLanguagesQueryParamAAA {
     // (undocumented)
-    queryParameters?: GetLanguagesQueryParamProperties;
+    queryParameters?: GetLanguagesQueryParamProperties_Change;
+  testFunc(s:string): number
+    hehe: (c:number) => string
+(v: object): boolean;
+(vxxx: object): string;
 }
 
 // @public (undocumented)
-export interface GetLanguagesQueryParamProperties {
+export interface GetLanguagesQueryParamProperties_Change {
     scope?: string;
 }
 
@@ -242,7 +246,7 @@ export interface InputTextItem {
 }
 
 // @public (undocumented)
-export function isUnexpected(response: GetLanguages200Response | GetLanguagesDefaultResponse): response is GetLanguagesDefaultResponse;
+export function isUnexpected(response: GetLanguages200Response_Change | GetLanguagesDefaultResponse): response is GetLanguagesDefaultResponse;
 
 // @public (undocumented)
 export function isUnexpected(response: Translate200Response | TranslateDefaultResponse): response is TranslateDefaultResponse;
