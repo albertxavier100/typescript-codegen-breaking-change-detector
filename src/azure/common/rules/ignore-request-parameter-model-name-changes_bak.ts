@@ -1,11 +1,13 @@
-import { CreateOperationRule, OperationPair, ParseForESLintResult } from '../types';
+import { CreateOperationRule, OperationContext, OperationPair, ParseForESLintResult, RenameMessage } from '../types';
+import { RuleListener, getParserServices } from '@typescript-eslint/utils/eslint-utils';
+import { getOperationContexsFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils';
 import { getOperationPairsWithSamePath, getRenamedParameterTypeNameMap } from '../../utils/azure-operation-utils';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
-import { RuleListener } from '@typescript-eslint/utils/eslint-utils';
 import { createOperationRuleListener } from '../../utils/azure-rule-utils';
-import { getOperationContexsFromEsParseResult } from '../../utils/azure-ast-utils';
+import { getGlobalScope } from '../../../utils/ast-utils';
 import { ignoreRequestParameterModelNameChanges } from '../../../common/models/rules/rule-ids';
+import { logger } from '../../../logging/logger';
 import { renameRuleMessageConverter } from '../../../common/models/rules/rule-messages';
 
 function getRenamedParameterPairs(operationPairs: OperationPair[]) {
@@ -14,10 +16,15 @@ function getRenamedParameterPairs(operationPairs: OperationPair[]) {
       operationPair.baseline.apiDetails!,
       operationPair.current.apiDetails!
     );
+    // const apiNameToRenamedApiPairMapForResponses = getRenamedResponseTypeNameMap(
+    //   operationPair.baseline.apiDetails!,
+    //   operationPair.current.apiDetails!
+    // );
     return {
       path: operationPair.path,
       currentNode: operationPair.current.node,
       renamedParameters: apiNameToRenamedApiPairMapForParameters,
+      // renamedResponses: apiNameToRenamedApiPairMapForResponses,
     };
   });
   return renamedList;
@@ -50,6 +57,19 @@ const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) =
                 });
               });
             }
+            // if (renamed.renamedResponses) {
+            //   renamed.renamedResponses.forEach((apiPairs) => {
+            //     apiPairs.forEach((apiPair) => {
+            //       const message = renameRuleMessageConverter.stringify({
+            //         id: ignoreRequestParameterModelNameChanges,
+            //         from: apiPair.baseline,
+            //         to: apiPair.current,
+            //         type: 'response',
+            //       });
+            //       context.report({ messageId: 'default', node, data: { message } });
+            //     });
+            //   });
+            // }
             return;
           }
         },

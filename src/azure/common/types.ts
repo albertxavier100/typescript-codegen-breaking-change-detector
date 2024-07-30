@@ -66,3 +66,17 @@ export interface RenamePair {
   baseline: string;
   current: string;
 }
+
+export interface RuleMessageContext<TMessage extends RuleMessage> {
+  parse(content: string): TMessage;
+  stringify(message: TMessage): string;
+}
+
+export interface RuleMessage {
+  type: 'request' | 'response' | 'operation';
+}
+
+export interface RenameMessage extends RuleMessage {
+  from: string;
+  to: string;
+}

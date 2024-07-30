@@ -1,23 +1,23 @@
 import { CreateOperationRule, OperationPair, ParseForESLintResult } from '../types';
-import { getOperationPairsWithSamePath, getRenamedParameterTypeNameMap } from '../../utils/azure-operation-utils';
+import { getOperationPairsWithSamePath, getRenamedResponseTypeNameMap } from '../../utils/azure-operation-utils';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { RuleListener } from '@typescript-eslint/utils/eslint-utils';
 import { createOperationRuleListener } from '../../utils/azure-rule-utils';
 import { getOperationContexsFromEsParseResult } from '../../utils/azure-ast-utils';
-import { ignoreRequestParameterModelNameChanges } from '../../../common/models/rules/rule-ids';
+import { ignoreResponseModelNameChanges } from '../../../common/models/rules/rule-ids';
 import { renameRuleMessageConverter } from '../../../common/models/rules/rule-messages';
 
-function getRenamedParameterPairs(operationPairs: OperationPair[]) {
+function getRenamedResponsePairs(operationPairs: OperationPair[]) {
   const renamedList = operationPairs.map((operationPair) => {
-    const apiNameToRenamedApiPairMapForParameters = getRenamedParameterTypeNameMap(
+    const apiNameToRenamedApiPairMapForResponses = getRenamedResponseTypeNameMap(
       operationPair.baseline.apiDetails!,
       operationPair.current.apiDetails!
     );
     return {
       path: operationPair.path,
       currentNode: operationPair.current.node,
-      renamedParameters: apiNameToRenamedApiPairMapForParameters,
+      renamedResponses: apiNameToRenamedApiPairMapForResponses,
     };
   });
   return renamedList;
@@ -26,10 +26,10 @@ function getRenamedParameterPairs(operationPairs: OperationPair[]) {
 const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) => {
   const baselineOperationContexts = getOperationContexsFromEsParseResult(baselineParsedResult);
   return createOperationRuleListener(
-    ignoreRequestParameterModelNameChanges,
+    ignoreResponseModelNameChanges,
     (context: RuleContext<string, readonly unknown[]>): RuleListener => {
       const operationPairs = getOperationPairsWithSamePath(context, baselineOperationContexts);
-      const renamedList = getRenamedParameterPairs(operationPairs);
+      const renamedList = getRenamedResponsePairs(operationPairs);
 
       return {
         TSInterfaceDeclaration(node) {
@@ -38,13 +38,13 @@ const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) =
             if (node !== renamed.currentNode) {
               continue;
             }
-            if (renamed.renamedParameters) {
-              renamed.renamedParameters.forEach((apiPairs) => {
+            if (renamed.renamedResponses) {
+              renamed.renamedResponses.forEach((apiPairs) => {
                 apiPairs.forEach((apiPair) => {
                   const message = renameRuleMessageConverter.stringify({
                     from: apiPair.baseline,
                     to: apiPair.current,
-                    type: 'request',
+                    type: 'response',
                   });
                   context.report({ messageId: 'default', node, data: { message } });
                 });

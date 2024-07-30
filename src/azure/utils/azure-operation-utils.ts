@@ -1,6 +1,10 @@
-import { ApiContext, ApiDetail, RenamePair, RequestDetail } from '../common/types';
+import { ApiContext, ApiDetail, OperationContext, OperationPair, RenamePair, RequestDetail } from '../common/types';
+import { getRequestParametersInfo, restLevelClient } from './azure-ast-utils';
 
-import { getRequestParametersInfo } from './azure-ast-utils';
+import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
+import { getGlobalScope } from '../../utils/ast-utils';
+import { getParserServices } from '@typescript-eslint/utils/eslint-utils';
+import { ignoreRequestParameterModelNameChanges } from '../../common/models/rules/rule-ids';
 
 function getApiDetail(api: ApiContext): ApiDetail {
   const requestInfo = api.partialParameterTypes.reduce((arr, p) => {
@@ -106,4 +110,33 @@ export function getApiDetails(apis: Map<string, ApiContext>): Map<string, ApiDet
     map.set(api.name, getApiDetail(api));
   });
   return map;
+}
+
+export function getOperationPairsWithSamePath(
+  context: RuleContext<string, readonly unknown[]>,
+  baselineOperationContexts: Map<string, OperationContext>
+) {
+  if (!context.sourceCode.scopeManager) {
+    // TODO: carefully handle throw
+    throw new Error(
+      `Failed to run rule "${ignoreRequestParameterModelNameChanges}" due to lack of scope manager in rule context.`
+    );
+  }
+  const currentService = getParserServices(context);
+  const currentGlobalScope = getGlobalScope(context.sourceCode.scopeManager);
+  const currentOperationContexts = restLevelClient.findOperationsContext(currentGlobalScope, currentService);
+
+  const baselineOperationPaths = Array.from(baselineOperationContexts.keys());
+
+  // filter operations have the same path
+  const operationPairs: OperationPair[] = baselineOperationPaths
+    .filter((path) => currentOperationContexts.has(path))
+    .map((path) => {
+      const baseline = baselineOperationContexts.get(path)!;
+      const current = currentOperationContexts.get(path)!;
+      baseline.apiDetails = getApiDetails(baseline.apis);
+      current.apiDetails = getApiDetails(current.apis);
+      return { path, baseline, current };
+    });
+  return operationPairs;
 }
