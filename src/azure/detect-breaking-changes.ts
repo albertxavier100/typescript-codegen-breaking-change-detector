@@ -5,9 +5,7 @@ import { Renderer, marked } from 'marked';
 import { basename, join, posix, relative } from 'node:path';
 import { exists, outputFile, readFile, remove } from 'fs-extra';
 
-import { Linter } from '@typescript-eslint/utils/ts-eslint';
 import { TSESLint } from '@typescript-eslint/utils';
-import { devConsolelog } from '../utils/common-utils';
 import { glob } from 'glob';
 import ignoreOperationInterfaceNameChangesRule from './common/rules/ignore-operation-interface-name-changes';
 import ignoreRequestParameterModelNameChangesRule from './common/rules/ignore-request-parameter-model-name-changes';
