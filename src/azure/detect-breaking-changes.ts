@@ -1,16 +1,16 @@
 import * as parser from '@typescript-eslint/parser';
 
-import { ParseForESLintResult, RuleMessage } from './common/types';
+import { ParseForESLintResult, RuleMessage } from './common/types.js';
 import { Renderer, marked } from 'marked';
 import { basename, join, posix, relative } from 'node:path';
 import { exists, outputFile, readFile, remove } from 'fs-extra';
 
 import { TSESLint } from '@typescript-eslint/utils';
 import { glob } from 'glob';
-import ignoreOperationInterfaceNameChangesRule from './common/rules/ignore-operation-interface-name-changes';
-import ignoreRequestParameterModelNameChangesRule from './common/rules/ignore-request-parameter-model-name-changes';
-import ignoreResponseModelNameChangesRule from './common/rules/ignore-response-model-name-changes';
-import { logger } from '../logging/logger';
+import ignoreOperationInterfaceNameChangesRule from './common/rules/ignore-operation-interface-name-changes.js';
+import ignoreRequestParameterModelNameChangesRule from './common/rules/ignore-request-parameter-model-name-changes.js';
+import ignoreResponseModelNameChangesRule from './common/rules/ignore-response-model-name-changes.js';
+import { logger } from '../logging/logger.js';
 
 const tsconfig = `
 {

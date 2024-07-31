@@ -1,12 +1,12 @@
-import { CreateOperationRule, OperationPair, ParseForESLintResult, RenameMessage } from '../types';
-import { getOperationPairsWithSamePath, getRenamedResponseTypeNameMap } from '../../utils/azure-operation-utils';
+import { CreateOperationRule, OperationPair, ParseForESLintResult, RenameMessage } from '../types.js';
+import { getOperationPairsWithSamePath, getRenamedResponseTypeNameMap } from '../../utils/azure-operation-utils.js';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { RuleListener } from '@typescript-eslint/utils/eslint-utils';
-import { createOperationRuleListener } from '../../utils/azure-rule-utils';
-import { getOperationContexsFromEsParseResult } from '../../utils/azure-ast-utils';
-import { ignoreResponseModelNameChanges } from '../../../common/models/rules/rule-ids';
-import { getReport } from '../../../utils/common-utils';
+import { createOperationRuleListener } from '../../utils/azure-rule-utils.js';
+import { getOperationContexsFromEsParseResult } from '../../utils/azure-ast-utils.js';
+import { ignoreResponseModelNameChanges } from '../../../common/models/rules/rule-ids.js';
+import { getReport } from '../../../utils/common-utils.js';
 
 function getRenamedResponsePairs(operationPairs: OperationPair[]) {
   const renamedList = operationPairs.map((operationPair) => {

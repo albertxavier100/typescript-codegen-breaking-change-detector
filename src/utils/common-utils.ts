@@ -1,4 +1,4 @@
-import { LinterSettings } from '../azure/common/types';
+import { LinterSettings } from '../azure/common/types.js';
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import util from 'util';
 

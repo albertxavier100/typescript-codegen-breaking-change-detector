@@ -1,13 +1,13 @@
-import { CreateOperationRule, ParseForESLintResult, RenameMessage } from '../types';
+import { CreateOperationRule, ParseForESLintResult, RenameMessage } from '../types.js';
 import { RuleListener, getParserServices } from '@typescript-eslint/utils/eslint-utils';
-import { getGlobalScope, isNodeTypeAssignableTo } from '../../../utils/ast-utils';
-import { getOperationContexsFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils';
+import { getGlobalScope, isNodeTypeAssignableTo } from '../../../utils/ast-utils.js';
+import { getOperationContexsFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils.js';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { TSESTree } from '@typescript-eslint/types';
-import { createOperationRuleListener } from '../../utils/azure-rule-utils';
-import { ignoreOperationInterfaceNameChanges } from '../../../common/models/rules/rule-ids';
-import { getReport } from '../../../utils/common-utils';
+import { createOperationRuleListener } from '../../utils/azure-rule-utils.js';
+import { ignoreOperationInterfaceNameChanges } from '../../../common/models/rules/rule-ids.js';
+import { getReport } from '../../../utils/common-utils.js';
 
 const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) => {
   const baselineOperationContexts = getOperationContexsFromEsParseResult(baselineParsedResult);

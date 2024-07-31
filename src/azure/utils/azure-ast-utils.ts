@@ -1,4 +1,4 @@
-import { ApiContext, OperationContext, ParseForESLintResult, RequestDetail } from '../common/types';
+import { ApiContext, OperationContext, ParseForESLintResult, RequestDetail } from '../common/types.js';
 import { InterfaceDeclaration, MethodSignature, SourceFile, SyntaxKind, createWrappedNode } from 'ts-morph';
 import { ParserServicesWithTypeInformation, TSESTree, TSESTree as t } from '@typescript-eslint/utils';
 import {
@@ -6,10 +6,10 @@ import {
   getGlobalScope,
   isInterfaceDeclarationNode,
   isParseServiceWithTypeInfo,
-} from '../../utils/ast-utils';
+} from '../../utils/ast-utils.js';
 
 import { Scope } from '@typescript-eslint/scope-manager';
-import { removePathParameter } from './azure-operation-utils';
+import { removePathParameter } from './azure-operation-utils.js';
 
 // TODO: find in import statements
 const importedDeclarations = [

@@ -1,10 +1,10 @@
-import { ApiContext, ApiDetail, OperationContext, OperationPair, RenamePair, RequestDetail } from '../common/types';
-import { getRequestParametersInfo, restLevelClient } from './azure-ast-utils';
+import { ApiContext, ApiDetail, OperationContext, OperationPair, RenamePair, RequestDetail } from '../common/types.js';
+import { getRequestParametersInfo, restLevelClient } from './azure-ast-utils.js';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
-import { getGlobalScope } from '../../utils/ast-utils';
+import { getGlobalScope } from '../../utils/ast-utils.js';
 import { getParserServices } from '@typescript-eslint/utils/eslint-utils';
-import { ignoreRequestParameterModelNameChanges } from '../../common/models/rules/rule-ids';
+import { ignoreRequestParameterModelNameChanges } from '../../common/models/rules/rule-ids.js';
 
 function getApiDetail(api: ApiContext): ApiDetail {
   const requestInfo = api.partialParameterTypes.reduce((arr, p) => {

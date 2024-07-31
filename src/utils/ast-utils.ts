@@ -3,8 +3,7 @@ import { Scope, ScopeManager } from '@typescript-eslint/scope-manager';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { TSESTree } from '@typescript-eslint/types';
-import { createWrappedNode } from 'ts-morph';
-import { devFileLogger } from '../logging/logger';
+import { devFileLogger } from '../logging/logger.js';
 import { findVariable } from '@typescript-eslint/utils/ast-utils';
 import { getParserServices } from '@typescript-eslint/utils/eslint-utils';
 

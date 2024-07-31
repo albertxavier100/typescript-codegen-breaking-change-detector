@@ -1,8 +1,9 @@
-import { describe, expect, test } from 'vitest';
-import { mkdirp, pathExists } from 'fs-extra/esm';
+import * as commonUtils from '../utils/common-utils.js';
 
-import { detectBreakingChangesBetweenPackages } from '../azure/detect-breaking-changes';
-import { devConsolelog } from '../utils/common-utils';
+import { describe, expect, test } from 'vitest';
+import { mkdirp, pathExists } from 'fs-extra';
+
+import { detectBreakingChangesBetweenPackages } from '../azure/detect-breaking-changes.js';
 import { join } from 'node:path';
 
 function getFormattedDate(): string {
@@ -42,7 +43,7 @@ describe('detect rest level client breaking changes', async () => {
       tempFolder,
       true
     );
-    devConsolelog(`🚀 ✶ messagesMap ✶ 🦄:`, messagesMap);
+    commonUtils.devConsolelog(`🚀 ✶ messagesMap ✶ 🦄:`, messagesMap);
     expect(messagesMap.size).toBe(1);
     // TODO: add more checks
   });
