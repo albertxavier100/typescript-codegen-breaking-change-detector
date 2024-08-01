@@ -167,7 +167,6 @@ export async function detectBreakingChangesBetweenPackages(
     currentPackageFolder = toPosixPath(currentPackageFolder);
     tempFolder = toPosixPath(tempFolder);
 
-    devConsolelog('start detect');
     const apiViewPathPattern = posix.join(baselinePackageFolder, 'review/*.api.md');
     const baselineApiViewPaths = await glob(apiViewPathPattern);
     const messsagesPromises = baselineApiViewPaths.map(async (baselineApiViewPath) => {
@@ -183,7 +182,6 @@ export async function detectBreakingChangesBetweenPackages(
     const messagesMap = new Map<string, RuleMessage[] | undefined>();
     const promises = messsagesPromises.map(async (p) => {
       const result = await p;
-      devConsolelog('name', result.name);
       messagesMap.set(result.name, result.messages);
     });
     await Promise.all(promises);
