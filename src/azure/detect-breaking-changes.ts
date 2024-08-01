@@ -5,7 +5,6 @@ import {
   InlineDeclarationNameSetMessage,
   LinterSettings,
   ParseForESLintResult,
-  RenameMessage,
   RuleMessage,
 } from './common/types.js';
 import { Renderer, marked } from 'marked';
@@ -16,7 +15,6 @@ import { exists, outputFile, readFile, remove } from 'fs-extra';
 import { TSESLint } from '@typescript-eslint/utils';
 import ignoreInlineDeclarationsInOperationGroup from './common/rules/ignore-inline-declarations-in-operation-group.js';
 import { glob } from 'glob';
-import ignoreOperationGroupNameChangesRule from './common/rules/ignore-operation-group-name-changes.js';
 import { logger } from '../logging/logger.js';
 
 const tsconfig = `
@@ -138,9 +136,6 @@ async function detectBreakingChangesCore(projectContext: ProjectContext): Promis
           tsconfigRootDir: projectContext.root,
         },
         settings: (<LinterSettings>{
-          reportRenameMessage: (message: RenameMessage) => {
-            breakingChangeResults.push(message);
-          },
           reportInlineDeclarationNameSetMessage: (message: InlineDeclarationNameSetMessage) => {
             breakingChangeResults.push(message);
           },

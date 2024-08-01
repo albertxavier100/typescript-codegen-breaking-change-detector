@@ -3,15 +3,6 @@ import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import path from 'path';
 import util from 'util';
 
-export function AreSameSets<T>(set1: Set<T>, set2: Set<T>): boolean {
-  if (set1.size !== set2.size) return false;
-
-  for (const item of set1) {
-    if (!set2.has(item)) return false;
-  }
-  return true;
-}
-
 // IMPORTANT: dev with chakrounanas.turbo-console-log vscode extension
 export function devConsolelog(title?: any, ...optionalParams: any[]): void {
   const start = '💎💎💎💎';

@@ -1,7 +1,6 @@
 import {
   CreateOperationRule,
   InlineDeclarationNameSetMessage,
-  OperationGroupContext,
   ParseForESLintResult,
   RuleMessageKind,
 } from '../types.js';
@@ -14,7 +13,6 @@ import {
   isInterfaceDeclarationNode,
   isParseServiceWithTypeInfo,
 } from '../../../utils/ast-utils.js';
-import { getOperationContexsFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils.js';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { createOperationRuleListener } from '../../utils/azure-rule-utils.js';
@@ -24,18 +22,15 @@ import { Scope } from '@typescript-eslint/scope-manager';
 import { getSettings } from '../../../utils/common-utils.js';
 
 function getInlineDeclarationNameSet(
-  operationContexts: Map<string, OperationGroupContext>,
   service: ParserServicesWithTypeInformation,
   scope: Scope
 ) {
   const inlineDeclarationNameSet = new Set<string>();
-  // operationContexts.forEach((c) => {
   const routes = findDeclaration('Routes', scope, isInterfaceDeclarationNode);
   const moNode = convertToMorphNode(routes, service);
   const result = findAllDeclarationsUnder(moNode, scope, service);
   result.interfaces.forEach((i) => inlineDeclarationNameSet.add(i.getName()));
   result.typeAliases.forEach((t) => inlineDeclarationNameSet.add(t.getName()));
-  // });
   return inlineDeclarationNameSet;
 }
 
@@ -47,9 +42,7 @@ const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult | 
     throw new Error(`Failed to get ParserServicesWithTypeInformation. It indicates the parser configuration is wrong.`);
   }
   const baselineGlobalScope = getGlobalScope(baselineParsedResult.scopeManager);
-  const baselineOperationContexts = getOperationContexsFromEsParseResult(baselineParsedResult);
   const baselineInlineDeclarationNameSet = getInlineDeclarationNameSet(
-    baselineOperationContexts,
     baselineService,
     baselineGlobalScope
   );
@@ -59,9 +52,7 @@ const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult | 
     (context: RuleContext<string, readonly unknown[]>): RuleListener => {
       const currentService = getParserServices(context);
       const currentGlobalScope = getGlobalScope(context.sourceCode.scopeManager);
-      const currentOperationContexts = restLevelClient.findOperationsContext(currentGlobalScope, currentService);
       const currentInlineDeclarationNameSet = getInlineDeclarationNameSet(
-        currentOperationContexts,
         currentService,
         currentGlobalScope
       );
