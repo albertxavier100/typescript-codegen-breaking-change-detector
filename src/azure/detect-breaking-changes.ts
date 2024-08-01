@@ -114,7 +114,7 @@ async function detectBreakingChangesCore(projectContext: ProjectContext): Promis
     const breakingChangeResults: RuleMessage[] = [];
     const baselineParsed = await parseBaselinePackage(projectContext);
     const linter = new TSESLint.Linter({ cwd: projectContext.root });
-    linter.defineRule(ruleIds.ignoreOperationGroupNameChanges, ignoreOperationGroupNameChangesRule(baselineParsed));
+    // linter.defineRule(ruleIds.ignoreOperationGroupNameChanges, ignoreOperationGroupNameChangesRule(baselineParsed));
     linter.defineRule(
       ruleIds.ignoreInlineDeclarationsInOperationGroup,
       ignoreInlineDeclarationsInOperationGroup(baselineParsed)
@@ -124,7 +124,7 @@ async function detectBreakingChangesCore(projectContext: ProjectContext): Promis
       projectContext.current.code,
       {
         rules: {
-          [ruleIds.ignoreOperationGroupNameChanges]: [2],
+          // [ruleIds.ignoreOperationGroupNameChanges]: [2],
           [ruleIds.ignoreInlineDeclarationsInOperationGroup]: [2],
         },
         parser: '@typescript-eslint/parser',

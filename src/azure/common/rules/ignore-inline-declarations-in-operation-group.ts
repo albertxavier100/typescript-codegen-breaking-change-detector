@@ -9,7 +9,9 @@ import { RuleListener, getParserServices } from '@typescript-eslint/utils/eslint
 import {
   convertToMorphNode,
   findAllDeclarationsUnder,
+  findDeclaration,
   getGlobalScope,
+  isInterfaceDeclarationNode,
   isParseServiceWithTypeInfo,
 } from '../../../utils/ast-utils.js';
 import { getOperationContexsFromEsParseResult, restLevelClient } from '../../utils/azure-ast-utils.js';
@@ -27,12 +29,13 @@ function getInlineDeclarationNameSet(
   scope: Scope
 ) {
   const inlineDeclarationNameSet = new Set<string>();
-  operationContexts.forEach((c) => {
-    const moNode = convertToMorphNode(c.node, service);
-    const result = findAllDeclarationsUnder(moNode, scope, service);
-    result.interfaces.forEach((i) => inlineDeclarationNameSet.add(i.getName()));
-    result.typeAliases.forEach((t) => inlineDeclarationNameSet.add(t.getName()));
-  });
+  // operationContexts.forEach((c) => {
+  const routes = findDeclaration('Routes', scope, isInterfaceDeclarationNode);
+  const moNode = convertToMorphNode(routes, service);
+  const result = findAllDeclarationsUnder(moNode, scope, service);
+  result.interfaces.forEach((i) => inlineDeclarationNameSet.add(i.getName()));
+  result.typeAliases.forEach((t) => inlineDeclarationNameSet.add(t.getName()));
+  // });
   return inlineDeclarationNameSet;
 }
 
