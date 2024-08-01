@@ -1,4 +1,4 @@
-import { InterfaceDeclaration, SyntaxKind, TypeNode } from 'ts-morph';
+import { InterfaceDeclaration, TypeNode } from 'ts-morph';
 import { RuleListener, RuleModule } from '@typescript-eslint/utils/eslint-utils';
 
 import { AST } from '@typescript-eslint/typescript-estree';
@@ -28,6 +28,7 @@ export interface CreateOperationRule {
   (baselineParsedResult: ParseForESLintResult | undefined): RuleModule<'default', readonly unknown[], RuleListener>;
 }
 
+// TODO: remove unused properties in operation group context
 export interface OperationGroupContext {
   name: string;
   pathExludeParameters: string;
@@ -81,14 +82,28 @@ export interface RuleMessageContext<TMessage extends RuleMessage> {
 
 export interface RuleMessage {
   id: string;
-  type: 'request' | 'response' | 'operation-group' | 'internal';
+  kind: RuleMessageKind;
+}
+
+export enum RuleMessageKind {
+  RenameMessage = 'RenameMessage',
+  InlineDeclarationNameSetMessage = 'InlineDeclarationNameSetMessage',
 }
 
 export interface RenameMessage extends RuleMessage {
   from: string;
   to: string;
+  type: 'operation-group';
+  kind: RuleMessageKind.RenameMessage;
+}
+
+export interface InlineDeclarationNameSetMessage extends RuleMessage {
+  baseline: Set<string>;
+  current: Set<string>;
+  kind: RuleMessageKind.InlineDeclarationNameSetMessage;
 }
 
 export interface LinterSettings {
-  report(message: RuleMessage): void;
+  reportRenameMessage(message: RenameMessage): void;
+  reportInlineDeclarationNameSetMessage(message: InlineDeclarationNameSetMessage): void;
 }

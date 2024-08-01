@@ -37,16 +37,17 @@ export function isNodeTypeAssignableTo(
 export function tryFindDeclaration<TNode extends TSESTree.Node>(
   name: string,
   scope: Scope,
-  typeGuard: (node: TSESTree.Node) => node is TNode
+  typeGuard: (node: TSESTree.Node) => node is TNode,
+  shouldLog: boolean = true
 ): TNode | undefined {
   const variable = findVariable(scope as Scope, name);
   const node = variable?.defs?.[0]?.node;
   if (!node) {
-    logger.warn(`Failed to find ${name}'s declaration`);
+    if (shouldLog) logger.warn(`Failed to find ${name}'s declaration`);
     return undefined;
   }
   if (!typeGuard(node)) {
-    logger.warn(`Found ${name}'s declaration but with another node type "${node.type}"`);
+    if (shouldLog) logger.warn(`Found ${name}'s declaration but with another node type "${node.type}"`);
     return undefined;
   }
   return node;
@@ -124,23 +125,23 @@ export function findAllDeclarationsUnder(node: Node, scope: Scope, service: Pars
   };
   const references = getTypeReferencesUnder(node);
   references.forEach((r) => {
-    const esInterfaceOfReference = tryFindDeclaration(r.getText(), scope, isInterfaceDeclarationNode);
+    const esInterfaceOfReference = tryFindDeclaration(r.getText(), scope, isInterfaceDeclarationNode, false);
     if (esInterfaceOfReference) {
       // console.log('////', esInterfaceOfReference.id.name);
       const interfaceOfReference = convertToMorphNode(esInterfaceOfReference, service).asKindOrThrow(
         SyntaxKind.InterfaceDeclaration
       );
       interfaces.push(interfaceOfReference);
-      findNext(interfaceOfReference)
+      findNext(interfaceOfReference);
     } else {
-      const esTypeAliasOfReference = tryFindDeclaration(r.getText(), scope, isTypeAliasDeclarationNode);
+      const esTypeAliasOfReference = tryFindDeclaration(r.getText(), scope, isTypeAliasDeclarationNode, false);
       if (esTypeAliasOfReference) {
         // console.log(']]]]', esTypeAliasOfReference.id.name);
         const typeAliasOfReference = convertToMorphNode(esTypeAliasOfReference, service).asKindOrThrow(
           SyntaxKind.TypeAliasDeclaration
         );
         typeAliases.push(typeAliasOfReference);
-        findNext(typeAliasOfReference)
+        findNext(typeAliasOfReference);
       }
     }
   });

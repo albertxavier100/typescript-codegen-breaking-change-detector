@@ -10,7 +10,6 @@ import {
 } from '../../utils/ast-utils.js';
 
 import { Scope } from '@typescript-eslint/scope-manager';
-import { removePathParameter } from './azure-operation-utils.js';
 import { devConsolelog } from '../../utils/common-utils.js';
 
 // TODO: find in import statements
@@ -26,7 +25,13 @@ const importedDeclarations = [
   'StreamableMethod',
 ];
 
+export function removePathParameter(path: string): string {
+  const pattern = /\{[^}]+\}/g;
+  return path.replace(pattern, '');
+}
+
 // TODO: refactor: pass in morph root node
+// TODO: remove unused properties in operation group context
 function findOperationsContextInRLC(
   scope: Scope,
   service: ParserServicesWithTypeInformation
@@ -43,12 +48,12 @@ function findOperationsContextInRLC(
         const path = (literalType.literal as t.Literal)?.value as string;
         return path;
       })[0];
-    const pathExludeParameters = removePathParameter(path);
+    const pathExcludeParameters = removePathParameter(path);
     var node = findDeclaration(name, scope, isInterfaceDeclarationNode);
     const moOperation = convertToMorphNode(node, service).asKindOrThrow(SyntaxKind.InterfaceDeclaration);
     const apis = getApiContexts(moOperation);
 
-    return { name, pathExludeParameters, node, apis };
+    return { name, pathExludeParameters: pathExcludeParameters, node, apis };
   });
   const map = operationContexts.reduce((map, op) => {
     map.set(op.pathExludeParameters, op);

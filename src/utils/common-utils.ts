@@ -23,8 +23,8 @@ export function devConsolelog(title?: any, ...optionalParams: any[]): void {
   console.log();
 }
 
-export function getReport(context: RuleContext<string, readonly unknown[]>) {
-  return (context.settings as any as LinterSettings)!.report;
+export function getSettings(context: RuleContext<string, readonly unknown[]>) {
+  return (context.settings as any as LinterSettings)!;
 }
 
 export function toPosixPath(winPath: string) {

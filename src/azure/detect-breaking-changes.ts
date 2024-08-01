@@ -1,18 +1,22 @@
 import * as parser from '@typescript-eslint/parser';
 import * as ruleIds from '../common/models/rules/rule-ids.js';
 
-import { ParseForESLintResult, RuleMessage } from './common/types.js';
+import {
+  InlineDeclarationNameSetMessage,
+  LinterSettings,
+  ParseForESLintResult,
+  RenameMessage,
+  RuleMessage,
+} from './common/types.js';
 import { Renderer, marked } from 'marked';
 import { basename, join, posix, relative } from 'node:path';
 import { devConsolelog, toPosixPath } from '../utils/common-utils.js';
 import { exists, outputFile, readFile, remove } from 'fs-extra';
 
 import { TSESLint } from '@typescript-eslint/utils';
-import findDeclarationOfTypeReferenceForRoutesRule from './common/rules/find-declaration-of-type-reference-for-routes.js';
+import ignoreInlineDeclarationsInOperationGroup from './common/rules/ignore-inline-declarations-in-operation-group.js';
 import { glob } from 'glob';
 import ignoreOperationGroupNameChangesRule from './common/rules/ignore-operation-group-name-changes.js';
-import ignoreRequestParameterModelNameChangesRule from './common/rules/ignore-request-parameter-model-name-changes.js';
-import ignoreResponseModelNameChangesRule from './common/rules/ignore-response-model-name-changes.js';
 import { logger } from '../logging/logger.js';
 
 const tsconfig = `
@@ -105,57 +109,23 @@ async function parseBaselinePackage(projectContext: ProjectContext): Promise<Par
   return result;
 }
 
-function findRoot(projectContext: ProjectContext) {
-  const linter = new TSESLint.Linter({ cwd: projectContext.root });
-  linter.defineRule(
-    ruleIds.findDeclarationOfTypeReferenceForRoutes,
-    findDeclarationOfTypeReferenceForRoutesRule(undefined)
-  );
-  linter.defineParser('@typescript-eslint/parser', parser);
-  linter.verify(
-    projectContext.current.code,
-    {
-      rules: {
-        [ruleIds.findDeclarationOfTypeReferenceForRoutes]: [2],
-      },
-      parser: '@typescript-eslint/parser',
-      parserOptions: {
-        filePath: projectContext.current.relativeFilePath,
-        comment: true,
-        tokens: true,
-        range: true,
-        loc: true,
-        project: './tsconfig.json',
-        tsconfigRootDir: projectContext.root,
-      },
-      settings: {
-        report: (message: RuleMessage) => {},
-      },
-    },
-    projectContext.current.relativeFilePath
-  );
-}
-
 async function detectBreakingChangesCore(projectContext: ProjectContext): Promise<RuleMessage[] | undefined> {
   try {
-    findRoot(projectContext);
     const breakingChangeResults: RuleMessage[] = [];
     const baselineParsed = await parseBaselinePackage(projectContext);
     const linter = new TSESLint.Linter({ cwd: projectContext.root });
     linter.defineRule(ruleIds.ignoreOperationGroupNameChanges, ignoreOperationGroupNameChangesRule(baselineParsed));
     linter.defineRule(
-      ruleIds.ignoreRequestParameterModelNameChanges,
-      ignoreRequestParameterModelNameChangesRule(baselineParsed)
+      ruleIds.ignoreInlineDeclarationsInOperationGroup,
+      ignoreInlineDeclarationsInOperationGroup(baselineParsed)
     );
-    linter.defineRule(ruleIds.ignoreResponseModelNameChanges, ignoreResponseModelNameChangesRule(baselineParsed));
     linter.defineParser('@typescript-eslint/parser', parser);
     linter.verify(
       projectContext.current.code,
       {
         rules: {
           [ruleIds.ignoreOperationGroupNameChanges]: [2],
-          [ruleIds.ignoreRequestParameterModelNameChanges]: [2],
-          [ruleIds.ignoreResponseModelNameChanges]: [2],
+          [ruleIds.ignoreInlineDeclarationsInOperationGroup]: [2],
         },
         parser: '@typescript-eslint/parser',
         parserOptions: {
@@ -167,11 +137,14 @@ async function detectBreakingChangesCore(projectContext: ProjectContext): Promis
           project: './tsconfig.json',
           tsconfigRootDir: projectContext.root,
         },
-        settings: {
-          report: (message: RuleMessage) => {
+        settings: (<LinterSettings>{
+          reportRenameMessage: (message: RenameMessage) => {
             breakingChangeResults.push(message);
           },
-        },
+          reportInlineDeclarationNameSetMessage: (message: InlineDeclarationNameSetMessage) => {
+            breakingChangeResults.push(message);
+          },
+        }) as any,
       },
       projectContext.current.relativeFilePath
     );
