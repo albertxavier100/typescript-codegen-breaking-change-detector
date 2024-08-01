@@ -1,7 +1,8 @@
-import { ApiContext, OperationContext, ParseForESLintResult, RequestDetail } from '../common/types.js';
+import { ApiContext, OperationGroupContext, ParseForESLintResult, RequestDetail } from '../common/types.js';
 import { InterfaceDeclaration, MethodSignature, SourceFile, SyntaxKind, createWrappedNode } from 'ts-morph';
 import { ParserServicesWithTypeInformation, TSESTree, TSESTree as t } from '@typescript-eslint/utils';
 import {
+  convertToMorphNode,
   findDeclaration,
   getGlobalScope,
   isInterfaceDeclarationNode,
@@ -10,6 +11,7 @@ import {
 
 import { Scope } from '@typescript-eslint/scope-manager';
 import { removePathParameter } from './azure-operation-utils.js';
+import { devConsolelog } from '../../utils/common-utils.js';
 
 // TODO: find in import statements
 const importedDeclarations = [
@@ -24,18 +26,11 @@ const importedDeclarations = [
   'StreamableMethod',
 ];
 
-function convertToMorphNode(node: TSESTree.Node, service: ParserServicesWithTypeInformation) {
-  const tsNode = service.esTreeNodeToTSNodeMap.get(node);
-  const typeChecker = service.program.getTypeChecker();
-  const moNode = createWrappedNode(tsNode, { typeChecker });
-  return moNode;
-}
-
 // TODO: refactor: pass in morph root node
 function findOperationsContextInRLC(
   scope: Scope,
   service: ParserServicesWithTypeInformation
-): Map<string, OperationContext> {
+): Map<string, OperationGroupContext> {
   const routes = findDeclaration('Routes', scope, isInterfaceDeclarationNode);
   const operationContexts = routes.body.body.map((call) => {
     const callSignature = call as t.TSCallSignatureDeclaration;
@@ -58,7 +53,7 @@ function findOperationsContextInRLC(
   const map = operationContexts.reduce((map, op) => {
     map.set(op.pathExludeParameters, op);
     return map;
-  }, new Map<string, OperationContext>());
+  }, new Map<string, OperationGroupContext>());
   return map;
 }
 
@@ -96,7 +91,25 @@ function getApiParameterDeclarations(api: MethodSignature): InterfaceDeclaration
     SyntaxKind.TypeAliasDeclaration,
     sourceFile
   );
-  // IMPORTANT: only consider intersaction type, which is the same as current tool
+  // IMPORTANT: only consider intersection type or interface declaration type or type alias type, which is the same as current tool
+  // TODO: refactor these branches
+  if (coreParamInterface.getFirstChildByKind(SyntaxKind.TypeReference)) {
+    // it's an imported type
+    const typeReference = coreParamInterface.getFirstChildByKindOrThrow(SyntaxKind.TypeReference);
+    if (importedDeclarations.includes(typeReference.getTypeName().getText())) {
+      return [];
+    }
+    throw new Error(`Type alias is unsupported for request parameter.`);
+  }
+  if (coreParamInterface.getFirstChildByKind(SyntaxKind.InterfaceDeclaration)) {
+    const parameterInterface = coreParamInterface.getFirstChildByKindOrThrow(SyntaxKind.InterfaceDeclaration);
+    const declaration = findDeclarationInGlobalScope(
+      parameterInterface.getName(),
+      SyntaxKind.InterfaceDeclaration,
+      sourceFile
+    ).asKindOrThrow(SyntaxKind.InterfaceDeclaration);
+    return [declaration];
+  }
   const parameterIntersectionType = coreParamInterface.getFirstChildByKindOrThrow(SyntaxKind.IntersectionType);
 
   // TODO: get the actual properties
@@ -120,9 +133,10 @@ function getApiParameterDeclarations(api: MethodSignature): InterfaceDeclaration
   // IMPORTANT: only consider interfaces
   // TODO: support for features like extend
   const parameterDeclarations = parameterNamesWithoutImport.map((n) => {
-    const declaration = findDeclarationInGlobalScope(n, SyntaxKind.InterfaceDeclaration, sourceFile);
-    const decl = declaration.asKindOrThrow(SyntaxKind.InterfaceDeclaration);
-    return decl;
+    const declaration = findDeclarationInGlobalScope(n, SyntaxKind.InterfaceDeclaration, sourceFile).asKindOrThrow(
+      SyntaxKind.InterfaceDeclaration
+    );
+    return declaration;
   });
   return parameterDeclarations;
 }
@@ -143,9 +157,24 @@ function getApiResponseDeclarations(api: MethodSignature): Map<string, Interface
       `Expected 1 union type, but got ${typeArguments.length} for API response type in "${api.getText()}"`
     );
   }
-  if (typeArguments[0].getKind() !== SyntaxKind.UnionType) {
-    throw new Error(`Expected union type for response model, but got ${typeArguments[0].getKindName()}`);
+  // TODO: refactor these branches
+  if (typeArguments[0].getKind() !== SyntaxKind.UnionType && typeArguments[0].getKind() !== SyntaxKind.TypeReference) {
+    throw new Error(
+      `Expected union type or type reference for response model, but got ${typeArguments[0].getKindName()}`
+    );
   }
+
+  if (typeArguments[0].getKind() === SyntaxKind.TypeReference) {
+    const name = typeArguments[0].getText();
+    devConsolelog(`🚀 ✶ name ✶ 🦄:`, name);
+    const declaration = findDeclarationInGlobalScope(name, SyntaxKind.InterfaceDeclaration, sourceFile).asKindOrThrow(
+      SyntaxKind.InterfaceDeclaration
+    );
+    const map = new Map<string, InterfaceDeclaration>();
+    map.set(name, declaration);
+    return map;
+  }
+
   const responseUnionType = typeArguments[0].asKindOrThrow(SyntaxKind.UnionType);
   const responseTypes = responseUnionType.getTypeNodes();
   const responseNamesWithoutImport = responseTypes
@@ -157,9 +186,10 @@ function getApiResponseDeclarations(api: MethodSignature): Map<string, Interface
   // IMPORTANT: only consider interfaces
   // TODO: support for features like extend
   const responseDeclarations = responseNamesWithoutImport.reduce((map, n) => {
-    const declaration = findDeclarationInGlobalScope(n, SyntaxKind.InterfaceDeclaration, sourceFile);
-    const decl = declaration.asKindOrThrow(SyntaxKind.InterfaceDeclaration);
-    map.set(n, decl);
+    const declaration = findDeclarationInGlobalScope(n, SyntaxKind.InterfaceDeclaration, sourceFile).asKindOrThrow(
+      SyntaxKind.InterfaceDeclaration
+    );
+    map.set(n, declaration);
     return map;
   }, new Map<string, InterfaceDeclaration>());
 
@@ -185,15 +215,22 @@ export function getApiContexts(operation: InterfaceDeclaration) {
 }
 
 export function getRequestParametersInfo(partOfRequestParameter: InterfaceDeclaration): RequestDetail[] {
-  const properties = partOfRequestParameter.getStructure().properties;
-  if (!properties) {
-    return [{ name: undefined, type: undefined }];
+  const properties = partOfRequestParameter.getMembers();
+  if (properties.length === 0) {
+    return [{ name: undefined, type: undefined, node: undefined, wraper: undefined }];
   }
-  const info = properties.map((p) => {
-    if (typeof p.type === 'string') {
-      return { name: p.name, type: p.type };
+  const info = partOfRequestParameter.getMembers().map((m) => {
+    if (m.getKind() !== SyntaxKind.PropertySignature) {
+      throw new Error(`Unsupported member type: ${m.getKind()}`);
     }
-    return { name: p.name, type: undefined };
+    const member = m.asKindOrThrow(SyntaxKind.PropertySignature);
+    const name = member.getName();
+    const typeNode = member.getTypeNode();
+    if (!typeNode) {
+      return { name, type: undefined, node: undefined, wraper: partOfRequestParameter };
+    }
+    const type = typeNode.getText();
+    return { name, type, node: typeNode, wraper: partOfRequestParameter };
   });
   return info;
 }

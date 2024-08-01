@@ -1,13 +1,16 @@
 import * as parser from '@typescript-eslint/parser';
+import * as ruleIds from '../common/models/rules/rule-ids.js';
 
 import { ParseForESLintResult, RuleMessage } from './common/types.js';
 import { Renderer, marked } from 'marked';
 import { basename, join, posix, relative } from 'node:path';
+import { devConsolelog, toPosixPath } from '../utils/common-utils.js';
 import { exists, outputFile, readFile, remove } from 'fs-extra';
 
 import { TSESLint } from '@typescript-eslint/utils';
+import findDeclarationOfTypeReferenceForRoutesRule from './common/rules/find-declaration-of-type-reference-for-routes.js';
 import { glob } from 'glob';
-import ignoreOperationInterfaceNameChangesRule from './common/rules/ignore-operation-interface-name-changes.js';
+import ignoreOperationGroupNameChangesRule from './common/rules/ignore-operation-group-name-changes.js';
 import ignoreRequestParameterModelNameChangesRule from './common/rules/ignore-request-parameter-model-name-changes.js';
 import ignoreResponseModelNameChangesRule from './common/rules/ignore-response-model-name-changes.js';
 import { logger } from '../logging/logger.js';
@@ -51,9 +54,8 @@ async function loadCodeFromApiView(path: string) {
     return '';
   };
   marked(markdown, { renderer });
-  if (codeBlocks.length !== 1) {
-    throw new Error(`Expected 1 code block, got ${codeBlocks.length} in "${path}".`);
-  }
+  if (codeBlocks.length !== 1) throw new Error(`Expected 1 code block, got ${codeBlocks.length} in "${path}".`);
+
   return codeBlocks[0];
 }
 
@@ -103,30 +105,57 @@ async function parseBaselinePackage(projectContext: ProjectContext): Promise<Par
   return result;
 }
 
+function findRoot(projectContext: ProjectContext) {
+  const linter = new TSESLint.Linter({ cwd: projectContext.root });
+  linter.defineRule(
+    ruleIds.findDeclarationOfTypeReferenceForRoutes,
+    findDeclarationOfTypeReferenceForRoutesRule(undefined)
+  );
+  linter.defineParser('@typescript-eslint/parser', parser);
+  linter.verify(
+    projectContext.current.code,
+    {
+      rules: {
+        [ruleIds.findDeclarationOfTypeReferenceForRoutes]: [2],
+      },
+      parser: '@typescript-eslint/parser',
+      parserOptions: {
+        filePath: projectContext.current.relativeFilePath,
+        comment: true,
+        tokens: true,
+        range: true,
+        loc: true,
+        project: './tsconfig.json',
+        tsconfigRootDir: projectContext.root,
+      },
+      settings: {
+        report: (message: RuleMessage) => {},
+      },
+    },
+    projectContext.current.relativeFilePath
+  );
+}
+
 async function detectBreakingChangesCore(projectContext: ProjectContext): Promise<RuleMessage[] | undefined> {
   try {
+    findRoot(projectContext);
     const breakingChangeResults: RuleMessage[] = [];
     const baselineParsed = await parseBaselinePackage(projectContext);
     const linter = new TSESLint.Linter({ cwd: projectContext.root });
+    linter.defineRule(ruleIds.ignoreOperationGroupNameChanges, ignoreOperationGroupNameChangesRule(baselineParsed));
     linter.defineRule(
-      'ignore-operation-interface-name-changes',
-      ignoreOperationInterfaceNameChangesRule(baselineParsed)
-    );
-    linter.defineRule(
-      'ignore-request-parameter-model-name-changes',
+      ruleIds.ignoreRequestParameterModelNameChanges,
       ignoreRequestParameterModelNameChangesRule(baselineParsed)
     );
-    linter.defineRule('ignore-response-model-name-changes', ignoreResponseModelNameChangesRule(baselineParsed));
+    linter.defineRule(ruleIds.ignoreResponseModelNameChanges, ignoreResponseModelNameChangesRule(baselineParsed));
     linter.defineParser('@typescript-eslint/parser', parser);
-    console.log('projectContext.current.relativeFilePath', projectContext.current.relativeFilePath);
     linter.verify(
       projectContext.current.code,
       {
-        // TODO: add warning if order is incorrect
         rules: {
-          'ignore-operation-interface-name-changes': [2],
-          'ignore-request-parameter-model-name-changes': [2],
-          'ignore-response-model-name-changes': [2],
+          [ruleIds.ignoreOperationGroupNameChanges]: [2],
+          [ruleIds.ignoreRequestParameterModelNameChanges]: [2],
+          [ruleIds.ignoreResponseModelNameChanges]: [2],
         },
         parser: '@typescript-eslint/parser',
         parserOptions: {
@@ -159,32 +188,34 @@ export async function detectBreakingChangesBetweenPackages(
   tempFolder: string | undefined,
   cleanUpAtTheEnd: boolean
 ): Promise<Map<string, RuleMessage[] | undefined>> {
-  if (!baselinePackageFolder) {
-    throw new Error(`Failed to use undefined or null baseline package folder`);
-  }
-  if (!currentPackageFolder) {
-    throw new Error(`Failed to use undefined or null current package folder`);
-  }
-  if (!tempFolder) {
-    throw new Error(`Failed to use undefined or null temp folder`);
-  }
+  if (!baselinePackageFolder) throw new Error(`Failed to use undefined or null baseline package folder`);
+
+  if (!currentPackageFolder) throw new Error(`Failed to use undefined or null current package folder`);
+
+  if (!tempFolder) throw new Error(`Failed to use undefined or null temp folder`);
+
   try {
+    baselinePackageFolder = toPosixPath(baselinePackageFolder);
+    currentPackageFolder = toPosixPath(currentPackageFolder);
+    tempFolder = toPosixPath(tempFolder);
+
+    devConsolelog('start detect');
     const apiViewPathPattern = posix.join(baselinePackageFolder, 'review/*.api.md');
     const baselineApiViewPaths = await glob(apiViewPathPattern);
     const messsagesPromises = baselineApiViewPaths.map(async (baselineApiViewPath) => {
-      const relativeApiViewPath = relative(baselinePackageFolder, baselineApiViewPath);
+      const relativeApiViewPath = relative(baselinePackageFolder!, baselineApiViewPath);
       const apiViewBasename = basename(relativeApiViewPath);
-      const currentApiViewPath = join(currentPackageFolder, relativeApiViewPath);
-      if (!(await exists(currentApiViewPath))) {
-        throw new Error(`Failed to find API view: ${currentApiViewPath}`);
-      }
-      const projectContext = await prepareProject(currentApiViewPath, baselineApiViewPath, tempFolder);
+      const currentApiViewPath = join(currentPackageFolder!, relativeApiViewPath);
+      if (!(await exists(currentApiViewPath))) throw new Error(`Failed to find API view: ${currentApiViewPath}`);
+
+      const projectContext = await prepareProject(currentApiViewPath, baselineApiViewPath, tempFolder!);
       const messages = await detectBreakingChangesCore(projectContext);
       return { name: apiViewBasename, messages };
     });
     const messagesMap = new Map<string, RuleMessage[] | undefined>();
     const promises = messsagesPromises.map(async (p) => {
       const result = await p;
+      devConsolelog('name', result.name);
       messagesMap.set(result.name, result.messages);
     });
     await Promise.all(promises);

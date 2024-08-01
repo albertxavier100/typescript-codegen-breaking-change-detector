@@ -1,4 +1,12 @@
-import { ApiContext, ApiDetail, OperationContext, OperationPair, RenamePair, RequestDetail } from '../common/types.js';
+import {
+  ApiContext,
+  ApiDetail,
+  OperationGroupContext,
+  OperationGroupPair,
+  RenamePair,
+  RequestDetail,
+  ResponseDetail,
+} from '../common/types.js';
 import { getRequestParametersInfo, restLevelClient } from './azure-ast-utils.js';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
@@ -6,31 +14,41 @@ import { getGlobalScope } from '../../utils/ast-utils.js';
 import { getParserServices } from '@typescript-eslint/utils/eslint-utils';
 import { ignoreRequestParameterModelNameChanges } from '../../common/models/rules/rule-ids.js';
 
+// IMPORTANT: functions or variables named with "operation" should be "operationGroup". functions or variables named with "api" should be "operation"
+// TODO: correct naming
 function getApiDetail(api: ApiContext): ApiDetail {
-  const requestInfo = api.partialParameterTypes.reduce((arr, p) => {
-    const info = getRequestParametersInfo(p);
-    arr = arr.concat(info);
+  const requestInfo = api.partialParameterTypes.reduce((arr, wraper) => {
+    const detail = getRequestParametersInfo(wraper);
+    arr = arr.concat(detail);
     return arr;
   }, new Array<RequestDetail>());
-  const responseTypeNames = Array.from(api.responseTypes.keys());
-  return { parameters: requestInfo, responseTypes: responseTypeNames };
+  const responseInfo = Array.from(api.responseTypes.entries()).map((e) => <ResponseDetail>{ type: e[0], node: e[1] });
+  return { parameters: requestInfo, responseTypes: responseInfo };
 }
 
 function getRenamedParameterOrResponseTypePairs(
-  baselineTypes: (string | undefined)[],
-  currentTypes: (string | undefined)[]
+  baselineTypes: (RequestDetail | ResponseDetail)[],
+  currentTypes: (RequestDetail | ResponseDetail)[]
 ) {
   const count = Math.min(baselineTypes.length, currentTypes.length);
   let renamedPairs: RenamePair[] = [];
+  // TODO: support better detection
+  // LIMITATION: it can only detect rename in the same position/order
   for (let i = 0; i < count; i++) {
-    const baselineTypeName = baselineTypes[i];
-    const currentTypeName = currentTypes[i];
-    // IMPORTANT: limitation: only compare string
-    // e.g. A | B !== B | A, A & B !== B & A are consider as renamed.should be fixed in the future
-    if (!baselineTypeName || !currentTypeName || baselineTypeName === currentTypeName) {
-      continue;
+    const baselineDetail = baselineTypes[i];
+    const currentDetail = currentTypes[i];
+
+    if (
+      baselineDetail.node &&
+      currentDetail.node &&
+      baselineDetail.type &&
+      currentDetail.type &&
+      baselineDetail.node.getType().isAssignableTo(currentDetail.node.getType()) &&
+      currentDetail.node.getType().isAssignableTo(baselineDetail.node.getType()) &&
+      baselineDetail.type !== currentDetail.type
+    ) {
+      renamedPairs.push({ baseline: baselineDetail.type, current: currentDetail.type });
     }
-    renamedPairs.push({ baseline: baselineTypeName, current: currentTypeName });
   }
   return renamedPairs;
 }
@@ -40,10 +58,7 @@ function getRenamedResponseTypePairs(baseline: ApiDetail, current: ApiDetail): R
 }
 
 function getRenamedParameterTypePairs(baseline: ApiDetail, current: ApiDetail): RenamePair[] {
-  return getRenamedParameterOrResponseTypePairs(
-    baseline.parameters.map((p) => p.type),
-    current.parameters.map((p) => p.type)
-  );
+  return getRenamedParameterOrResponseTypePairs(baseline.parameters, current.parameters);
 }
 
 function getRenamedParameterOrResponseTypeNameMap(
@@ -75,7 +90,7 @@ export function getRenamedResponseTypeNameMap(
   baseline: Map<string, ApiDetail>,
   current: Map<string, ApiDetail>
 ): Map<string, RenamePair[]> | undefined {
-  const getTypesFunc = (apiDetail: ApiDetail): (string | undefined)[] => apiDetail.responseTypes;
+  const getTypesFunc = (apiDetail: ApiDetail): (string | undefined)[] => apiDetail.responseTypes.map((p) => p.type);
   const renamedMap = getRenamedParameterOrResponseTypeNameMap(
     baseline,
     current,
@@ -114,7 +129,7 @@ export function getApiDetails(apis: Map<string, ApiContext>): Map<string, ApiDet
 
 export function getOperationPairsWithSamePath(
   context: RuleContext<string, readonly unknown[]>,
-  baselineOperationContexts: Map<string, OperationContext>
+  baselineOperationContexts: Map<string, OperationGroupContext>
 ) {
   if (!context.sourceCode.scopeManager) {
     // TODO: carefully handle throw
@@ -129,7 +144,7 @@ export function getOperationPairsWithSamePath(
   const baselineOperationPaths = Array.from(baselineOperationContexts.keys());
 
   // filter operations have the same path
-  const operationPairs: OperationPair[] = baselineOperationPaths
+  const operationPairs: OperationGroupPair[] = baselineOperationPaths
     .filter((path) => currentOperationContexts.has(path))
     .map((path) => {
       const baseline = baselineOperationContexts.get(path)!;

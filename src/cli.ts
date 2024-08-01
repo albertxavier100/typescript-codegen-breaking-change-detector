@@ -1,4 +1,5 @@
-import { detectBreakingChangesBetweenPackages } from './azure/detect-breaking-changes.js';
+import { detectBreakingChangesBetweenPackages } from './azure/detect-breaking-changes';
+import { devConsolelog } from './utils/common-utils';
 import { program } from 'commander';
 
 program
@@ -8,9 +9,15 @@ program
   .requiredOption('--cleanup-at-the-end', 'cleanup temp folder at the end')
   .parse();
 const options = program.opts();
-detectBreakingChangesBetweenPackages(
-  options.baselinePackageFolder,
-  options.currentPackageFolder,
-  options.tempFolder,
-  options.cleanUpAtTheEnd ?? true
-);
+
+async function run() {
+  const messages = await detectBreakingChangesBetweenPackages(
+    options.baselinePackageFolder,
+    options.currentPackageFolder,
+    options.tempFolder,
+    options.cleanUpAtTheEnd ?? true
+  );
+  devConsolelog('messages', messages);
+}
+
+run();

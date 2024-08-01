@@ -1,15 +1,13 @@
 import { LinterSettings } from '../azure/common/types.js';
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
+import path from 'path';
 import util from 'util';
 
 export function AreSameSets<T>(set1: Set<T>, set2: Set<T>): boolean {
-  if (set1.size !== set2.size) {
-    return false;
-  }
+  if (set1.size !== set2.size) return false;
+
   for (const item of set1) {
-    if (!set2.has(item)) {
-      return false;
-    }
+    if (!set2.has(item)) return false;
   }
   return true;
 }
@@ -27,4 +25,9 @@ export function devConsolelog(title?: any, ...optionalParams: any[]): void {
 
 export function getReport(context: RuleContext<string, readonly unknown[]>) {
   return (context.settings as any as LinterSettings)!.report;
+}
+
+export function toPosixPath(winPath: string) {
+  const posixPath = winPath.split(path.sep).join(path.posix.sep);
+  return posixPath;
 }

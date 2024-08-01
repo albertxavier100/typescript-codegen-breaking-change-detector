@@ -1,21 +1,56 @@
-import { CreateOperationRule, OperationPair, ParseForESLintResult, RenameMessage } from '../types.js';
+import {
+  CreateOperationRule,
+  OperationGroupPair,
+  ParseForESLintResult,
+  RenameMessage,
+  RequestDetail,
+} from '../types.js';
 import { getOperationPairsWithSamePath, getRenamedParameterTypeNameMap } from '../../utils/azure-operation-utils.js';
 
 import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
-import { RuleListener } from '@typescript-eslint/utils/eslint-utils';
+import { getParserServices, RuleListener } from '@typescript-eslint/utils/eslint-utils';
 import { createOperationRuleListener } from '../../utils/azure-rule-utils.js';
 import { getOperationContexsFromEsParseResult } from '../../utils/azure-ast-utils.js';
 import { ignoreRequestParameterModelNameChanges } from '../../../common/models/rules/rule-ids.js';
-import { getReport } from '../../../utils/common-utils.js';
+import { devConsolelog, getReport } from '../../../utils/common-utils.js';
+import { InterfaceDeclaration } from 'ts-morph';
+import { TSESTree } from '@typescript-eslint/types';
+import { ParserServicesWithTypeInformation } from '@typescript-eslint/typescript-estree';
 
-function getRenamedParameterPairs(operationPairs: OperationPair[]) {
+// LIMITATION: compare with the same position for now
+// TODO: improve detection
+// function getRenamedParameterWraperSet(
+//   operationPairs: OperationGroupPair[],
+//   service: ParserServicesWithTypeInformation
+// ): {[interfaceName: string]: {baseline: RequestDetail, current: RequestDetail}} {
+
+//   const renamedWraperMap = operationPairs.map((operationPair) => {
+//     const baselineApiDetailMap = operationPair.baseline.apiDetails!
+//     const currentApiDetailMap = operationPair.current.apiDetails!
+//     const currentApiNames = new Set<string>(currentApiDetailMap.keys());
+//     const apiNamesInBothPackage = [...baselineApiDetailMap.keys()].filter((baselineApiName) =>
+//       currentApiNames.has(baselineApiName)
+//     );
+//     apiNamesInBothPackage.map(apiName => {
+//       const baselineApiDetail = baselineApiDetailMap.get(apiName)!
+//       const currentApiDetail = currentApiDetailMap.get(apiName)!
+//       const baselineWrapers = baselineApiDetail.parameters.map(p => p.wraper)
+//       const currentWrapers = currentApiDetail.parameters.map(p => p.wraper)
+
+//     })
+//     // return renamedWraperSet;
+//   });
+// }
+
+// LIMITATION: compare with the same position for now
+// TODO: improve detection
+function getRenamedParameterPairs(operationPairs: OperationGroupPair[]) {
   const renamedList = operationPairs.map((operationPair) => {
     const apiNameToRenamedApiPairMapForParameters = getRenamedParameterTypeNameMap(
       operationPair.baseline.apiDetails!,
       operationPair.current.apiDetails!
     );
     return {
-      path: operationPair.path,
       currentNode: operationPair.current.node,
       renamedParameters: apiNameToRenamedApiPairMapForParameters,
     };
@@ -23,35 +58,42 @@ function getRenamedParameterPairs(operationPairs: OperationPair[]) {
   return renamedList;
 }
 
-const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult) => {
+const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult | undefined) => {
+  if (!baselineParsedResult)
+    throw new Error(`ParseForESLintResult is required in ${ignoreRequestParameterModelNameChanges} rule`);
+  
   const baselineOperationContexts = getOperationContexsFromEsParseResult(baselineParsedResult);
   return createOperationRuleListener(
     ignoreRequestParameterModelNameChanges,
     (context: RuleContext<string, readonly unknown[]>): RuleListener => {
       const operationPairs = getOperationPairsWithSamePath(context, baselineOperationContexts);
-      const renamedList = getRenamedParameterPairs(operationPairs);
-
+      const renamedParameters = getRenamedParameterPairs(operationPairs);
+      const service = getParserServices(context);
+      // const renamedParameterWraperSet = getRenamedParameterWraperSet(operationPairs, service);
       return {
         TSInterfaceDeclaration(node) {
           // TODO: get path in node to improve perf
-          for (const renamed of renamedList) {
-            if (node !== renamed.currentNode) {
-              continue;
-            }
-            if (renamed.renamedParameters) {
-              renamed.renamedParameters.forEach((apiPairs) => {
-                apiPairs.forEach((apiPair) => {
-                  getReport(context)(<RenameMessage>{
-                    id: ignoreRequestParameterModelNameChanges,
-                    from: apiPair.baseline,
-                    to: apiPair.current,
-                    type: 'request',
-                  });
+          for (const renamed of renamedParameters) {
+            if (node !== renamed.currentNode || !renamed.renamedParameters) continue;
+            renamed.renamedParameters.forEach((apiPairs) => {
+              apiPairs.forEach((apiPair) => {
+                getReport(context)(<RenameMessage>{
+                  id: ignoreRequestParameterModelNameChanges,
+                  from: apiPair.baseline,
+                  to: apiPair.current,
+                  type: 'request',
                 });
               });
-            }
-            return;
+            });
           }
+          // if (renamedParameterWraperSet.has(node)) {
+          //   getReport(context)(<RenameMessage>{
+          //     id: ignoreRequestParameterModelNameChanges,
+          //     from: ,
+          //     to: ,
+          //     type: 'request',
+          //   })
+          // }
         },
       };
     }

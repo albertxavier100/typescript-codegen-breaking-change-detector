@@ -6,7 +6,7 @@ const devStream = pretty({
   colorize: false,
   levelFirst: true,
   translateTime: 'yyyy-dd-mm, h:MM:ss TT',
-  destination: 'logs/app.log',
+  // destination: 'logs/app.log',
   append: false,
 });
 
@@ -14,8 +14,8 @@ const stream = pretty({
   colorize: false,
   levelFirst: true,
   translateTime: 'yyyy-dd-mm, h:MM:ss TT',
-  destination: 'logs/app.log',
-  append: false,
+  // destination: 'logs/app.log',
+  append: true,
 });
 
 // TODO: make logger configurable

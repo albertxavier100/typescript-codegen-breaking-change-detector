@@ -1,9 +1,9 @@
+import { InterfaceDeclaration, SyntaxKind, TypeNode } from 'ts-morph';
 import { RuleListener, RuleModule } from '@typescript-eslint/utils/eslint-utils';
-import type { Scope, ScopeManager } from '@typescript-eslint/scope-manager';
 
 import { AST } from '@typescript-eslint/typescript-estree';
-import { InterfaceDeclaration } from 'ts-morph';
 import { ParserServices } from '@typescript-eslint/parser';
+import type { ScopeManager } from '@typescript-eslint/scope-manager';
 import { TSESTree } from '@typescript-eslint/utils';
 import { TSESTreeOptions } from '@typescript-eslint/typescript-estree';
 import type { VisitorKeys } from '@typescript-eslint/visitor-keys';
@@ -25,10 +25,10 @@ export interface ParseAndGenerateServicesResult<T extends TSESTreeOptions> {
 }
 
 export interface CreateOperationRule {
-  (oldResult: ParseForESLintResult): RuleModule<'default', readonly unknown[], RuleListener>;
+  (baselineParsedResult: ParseForESLintResult | undefined): RuleModule<'default', readonly unknown[], RuleListener>;
 }
 
-export interface OperationContext {
+export interface OperationGroupContext {
   name: string;
   pathExludeParameters: string;
   node: TSESTree.TSInterfaceDeclaration;
@@ -49,17 +49,24 @@ export interface ApiContext {
 export interface RequestDetail {
   name: string | undefined;
   type: string | undefined;
+  node: TypeNode | undefined;
+  wraper: InterfaceDeclaration | undefined;
+}
+
+export interface ResponseDetail {
+  type: string | undefined;
+  node: InterfaceDeclaration | undefined;
 }
 
 export interface ApiDetail {
   parameters: RequestDetail[];
-  responseTypes: string[];
+  responseTypes: ResponseDetail[];
 }
 
-export interface OperationPair {
+export interface OperationGroupPair {
   path: string;
-  baseline: OperationContext;
-  current: OperationContext;
+  baseline: OperationGroupContext;
+  current: OperationGroupContext;
 }
 
 export interface RenamePair {
@@ -74,7 +81,7 @@ export interface RuleMessageContext<TMessage extends RuleMessage> {
 
 export interface RuleMessage {
   id: string;
-  type: 'request' | 'response' | 'operation';
+  type: 'request' | 'response' | 'operation-group' | 'internal';
 }
 
 export interface RenameMessage extends RuleMessage {

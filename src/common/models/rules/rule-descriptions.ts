@@ -1,5 +1,6 @@
 import {
-  ignoreOperationInterfaceNameChanges,
+  findDeclarationOfTypeReferenceForRoutes,
+  ignoreOperationGroupNameChanges,
   ignoreRequestParameterModelNameChanges,
   ignoreResponseModelNameChanges,
 } from './rule-ids.js';
@@ -9,7 +10,8 @@ function createDescription(action: string) {
 }
 
 export const ruleDescriptions: { [ruleId: string]: string } = {
-  [ignoreOperationInterfaceNameChanges]: createDescription('to ignore the changes in the name of operation interface'),
+  [ignoreOperationGroupNameChanges]: createDescription('to ignore the changes in the name of operation interface'),
   [ignoreRequestParameterModelNameChanges]: createDescription('to ignore changes in the request parameter name'),
   [ignoreResponseModelNameChanges]: createDescription('to ignore changes in the reponse name'),
+  [findDeclarationOfTypeReferenceForRoutes]: 'Find declaration of type reference for routes',
 };

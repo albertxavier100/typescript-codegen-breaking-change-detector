@@ -21,9 +21,8 @@ async function createTempFolder(tempFolderPrefix: string): Promise<string> {
   let tempFolder = '';
   for (let i = 0; i < maxRetry; i++) {
     const tempFolder = `${tempFolderPrefix}-${Math.round(Math.random() * 1000)}`;
-    if (await pathExists(tempFolder)) {
-      continue;
-    }
+    if (await pathExists(tempFolder)) continue;
+
     await mkdirp(tempFolder);
     return tempFolder;
   }
