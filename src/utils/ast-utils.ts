@@ -62,8 +62,8 @@ function handleTypeReference<
   scope: Scope,
   service: ParserServicesWithTypeInformation,
   list: TDeclaration[],
-  kind: SyntaxKind,
   findNext: (node: Node) => void,
+  kind: SyntaxKind,
   typeGuardForEs: (node: TSESTree.Node) => node is TEsDeclaration,
   typeGuardForMo: (node: Node) => node is TDeclaration
 ) {
@@ -131,8 +131,8 @@ export function findAllRenameableDeclarationsUnder(
       scope,
       service,
       interfaces,
-      SyntaxKind.InterfaceDeclaration,
       findNext,
+      SyntaxKind.InterfaceDeclaration,
       isInterfaceDeclarationNode,
       Node.isInterfaceDeclaration
     );
@@ -141,8 +141,8 @@ export function findAllRenameableDeclarationsUnder(
       scope,
       service,
       typeAliases,
-      SyntaxKind.TypeAliasDeclaration,
       findNext,
+      SyntaxKind.TypeAliasDeclaration,
       isTypeAliasDeclarationNode,
       Node.isTypeAliasDeclaration
     );
@@ -151,8 +151,8 @@ export function findAllRenameableDeclarationsUnder(
       scope,
       service,
       enums,
-      SyntaxKind.EnumDeclaration,
       findNext,
+      SyntaxKind.EnumDeclaration,
       isEnumDeclarationNode,
       Node.isEnumDeclaration
     );
