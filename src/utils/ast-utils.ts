@@ -11,15 +11,10 @@ import {
   createWrappedNode,
   TypeReferenceNode,
   SyntaxKind,
+  EnumDeclaration,
 } from 'ts-morph';
 
-export function getGlobalScope(scopeManager: ScopeManager | null): Scope {
-  const globalScope = scopeManager?.globalScope;
-  if (!globalScope) throw new Error(`Failed to find global scope`);
-  return globalScope;
-}
-
-export function tryFindDeclaration<TNode extends TSESTree.Node>(
+function tryFindDeclaration<TNode extends TSESTree.Node>(
   name: string,
   scope: Scope,
   typeGuard: (node: TSESTree.Node) => node is TNode,
@@ -36,6 +31,56 @@ export function tryFindDeclaration<TNode extends TSESTree.Node>(
     return undefined;
   }
   return node;
+}
+
+function isTypeAliasDeclarationNode(node: TSESTree.Node): node is TSESTree.TSTypeAliasDeclaration {
+  return node.type === TSESTree.AST_NODE_TYPES.TSTypeAliasDeclaration;
+}
+
+function isEnumDeclarationNode(node: TSESTree.Node): node is TSESTree.TSEnumDeclaration {
+  return node.type === TSESTree.AST_NODE_TYPES.TSEnumDeclaration;
+}
+
+function getTypeReferencesUnder(node: Node) {
+  const types: TypeReferenceNode[] = [];
+  if (!node) return types;
+  node.forEachChild((child) => {
+    if (Node.isTypeReference(child)) {
+      types.push(child);
+    }
+    const childTypeAliases = getTypeReferencesUnder(child);
+    types.push(...childTypeAliases);
+  });
+  return types;
+}
+
+function handleTypeReference<
+  TEsDeclaration extends TSESTree.TSInterfaceDeclaration | TSESTree.TSTypeAliasDeclaration | TSESTree.TSEnumDeclaration,
+  TDeclaration extends TypeAliasDeclaration | InterfaceDeclaration | EnumDeclaration,
+>(
+  r: TypeReferenceNode,
+  scope: Scope,
+  service: ParserServicesWithTypeInformation,
+  list: TDeclaration[],
+  kind: SyntaxKind,
+  findNext: (node: Node) => void,
+  typeGuardForEs: (node: TSESTree.Node) => node is TEsDeclaration,
+  typeGuardForMo: (node: Node) => node is TDeclaration
+) {
+  const esDeclaration = tryFindDeclaration(r.getText(), scope, typeGuardForEs, false);
+  if (!esDeclaration) return;
+  const declaration = convertToMorphNode(esDeclaration, service).asKindOrThrow(kind);
+  if (!typeGuardForMo(declaration)) {
+    throw new Error(`Failed to find expected type from reference ${r.getText()}`);
+  }
+  list.push(declaration);
+  findNext(declaration);
+}
+
+export function getGlobalScope(scopeManager: ScopeManager | null): Scope {
+  const globalScope = scopeManager?.globalScope;
+  if (!globalScope) throw new Error(`Failed to find global scope`);
+  return globalScope;
 }
 
 export function findDeclaration<TNode extends TSESTree.Node>(
@@ -56,24 +101,6 @@ export function isInterfaceDeclarationNode(node: TSESTree.Node): node is TSESTre
   return node.type === TSESTree.AST_NODE_TYPES.TSInterfaceDeclaration;
 }
 
-export function isTypeAliasDeclarationNode(node: TSESTree.Node): node is TSESTree.TSTypeAliasDeclaration {
-  return node.type === TSESTree.AST_NODE_TYPES.TSTypeAliasDeclaration;
-}
-
-
-export function getTypeReferencesUnder(node: Node) {
-  const types: TypeReferenceNode[] = [];
-  if (!node) return types;
-  node.forEachChild((child) => {
-    if (Node.isTypeReference(child)) {
-      types.push(child);
-    }
-    const childTypeAliases = getTypeReferencesUnder(child);
-    types.push(...childTypeAliases);
-  });
-  return types;
-}
-
 export function convertToMorphNode(node: TSESTree.Node, service: ParserServicesWithTypeInformation) {
   const tsNode = service.esTreeNodeToTSNodeMap.get(node);
   const typeChecker = service.program.getTypeChecker();
@@ -81,34 +108,54 @@ export function convertToMorphNode(node: TSESTree.Node, service: ParserServicesW
   return moNode;
 }
 
-export function findAllDeclarationsUnder(node: Node, scope: Scope, service: ParserServicesWithTypeInformation) {
+export function findAllRenameableDeclarationsUnder(
+  node: Node,
+  scope: Scope,
+  service: ParserServicesWithTypeInformation
+): { interfaces: InterfaceDeclaration[]; typeAliases: TypeAliasDeclaration[]; enums: EnumDeclaration[] } {
   const interfaces: InterfaceDeclaration[] = [];
   const typeAliases: TypeAliasDeclaration[] = [];
-  if (!node) return { interfaces, typeAliases };
+  const enums: EnumDeclaration[] = [];
+  if (!node) return { interfaces, typeAliases, enums };
   const findNext = (node: Node) => {
-    const result = findAllDeclarationsUnder(node, scope, service);
+    const result = findAllRenameableDeclarationsUnder(node, scope, service);
     interfaces.push(...result.interfaces);
     typeAliases.push(...result.typeAliases);
+    enums.push(...result.enums);
   };
+
   const references = getTypeReferencesUnder(node);
   references.forEach((r) => {
-    const esInterfaceOfReference = tryFindDeclaration(r.getText(), scope, isInterfaceDeclarationNode, false);
-    if (esInterfaceOfReference) {
-      const interfaceOfReference = convertToMorphNode(esInterfaceOfReference, service).asKindOrThrow(
-        SyntaxKind.InterfaceDeclaration
-      );
-      interfaces.push(interfaceOfReference);
-      findNext(interfaceOfReference);
-    } else {
-      const esTypeAliasOfReference = tryFindDeclaration(r.getText(), scope, isTypeAliasDeclarationNode, false);
-      if (esTypeAliasOfReference) {
-        const typeAliasOfReference = convertToMorphNode(esTypeAliasOfReference, service).asKindOrThrow(
-          SyntaxKind.TypeAliasDeclaration
-        );
-        typeAliases.push(typeAliasOfReference);
-        findNext(typeAliasOfReference);
-      }
-    }
+    handleTypeReference(
+      r,
+      scope,
+      service,
+      interfaces,
+      SyntaxKind.InterfaceDeclaration,
+      findNext,
+      isInterfaceDeclarationNode,
+      Node.isInterfaceDeclaration
+    );
+    handleTypeReference(
+      r,
+      scope,
+      service,
+      typeAliases,
+      SyntaxKind.TypeAliasDeclaration,
+      findNext,
+      isTypeAliasDeclarationNode,
+      Node.isTypeAliasDeclaration
+    );
+    handleTypeReference(
+      r,
+      scope,
+      service,
+      enums,
+      SyntaxKind.EnumDeclaration,
+      findNext,
+      isEnumDeclarationNode,
+      Node.isEnumDeclaration
+    );
   });
-  return { interfaces, typeAliases };
+  return { interfaces, typeAliases, enums };
 }

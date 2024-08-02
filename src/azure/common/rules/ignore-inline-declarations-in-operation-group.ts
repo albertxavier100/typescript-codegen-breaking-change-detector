@@ -1,13 +1,14 @@
 import {
   CreateOperationRule,
   InlineDeclarationNameSetMessage,
+  NodeContext,
   ParseForESLintResult,
   RuleMessageKind,
 } from '../types.js';
 import { RuleListener, getParserServices } from '@typescript-eslint/utils/eslint-utils';
 import {
   convertToMorphNode,
-  findAllDeclarationsUnder,
+  findAllRenameableDeclarationsUnder,
   findDeclaration,
   getGlobalScope,
   isInterfaceDeclarationNode,
@@ -21,17 +22,15 @@ import { ParserServicesWithTypeInformation } from '@typescript-eslint/typescript
 import { Scope } from '@typescript-eslint/scope-manager';
 import { getSettings } from '../../../utils/common-utils.js';
 
-function getInlineDeclarationNameSet(
-  service: ParserServicesWithTypeInformation,
-  scope: Scope
-) {
-  const inlineDeclarationNameSet = new Set<string>();
+function getInlineDeclarationNameSet(service: ParserServicesWithTypeInformation, scope: Scope) {
+  const inlineDeclarationMap = new Map<string, NodeContext>();
   const routes = findDeclaration('Routes', scope, isInterfaceDeclarationNode);
   const moNode = convertToMorphNode(routes, service);
-  const result = findAllDeclarationsUnder(moNode, scope, service);
-  result.interfaces.forEach((i) => inlineDeclarationNameSet.add(i.getName()));
-  result.typeAliases.forEach((t) => inlineDeclarationNameSet.add(t.getName()));
-  return inlineDeclarationNameSet;
+  const result = findAllRenameableDeclarationsUnder(moNode, scope, service);
+  result.interfaces.forEach((i) => inlineDeclarationMap.set(i.getName(), { node: i, used: false }));
+  result.typeAliases.forEach((t) => inlineDeclarationMap.set(t.getName(), { node: t, used: false }));
+  result.enums.forEach((e) => inlineDeclarationMap.set(e.getName(), { node: e, used: false }));
+  return inlineDeclarationMap;
 }
 
 const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult | undefined) => {
@@ -42,24 +41,18 @@ const rule: CreateOperationRule = (baselineParsedResult: ParseForESLintResult | 
     throw new Error(`Failed to get ParserServicesWithTypeInformation. It indicates the parser configuration is wrong.`);
   }
   const baselineGlobalScope = getGlobalScope(baselineParsedResult.scopeManager);
-  const baselineInlineDeclarationNameSet = getInlineDeclarationNameSet(
-    baselineService,
-    baselineGlobalScope
-  );
+  const baselineInlineDeclarationNameSet = getInlineDeclarationNameSet(baselineService, baselineGlobalScope);
 
   return createOperationRuleListener(
     ignoreInlineDeclarationsInOperationGroup,
     (context: RuleContext<string, readonly unknown[]>): RuleListener => {
       const currentService = getParserServices(context);
       const currentGlobalScope = getGlobalScope(context.sourceCode.scopeManager);
-      const currentInlineDeclarationNameSet = getInlineDeclarationNameSet(
-        currentService,
-        currentGlobalScope
-      );
+      const currentInlineDeclarationMap = getInlineDeclarationNameSet(currentService, currentGlobalScope);
       const message: InlineDeclarationNameSetMessage = {
         id: ignoreInlineDeclarationsInOperationGroup,
         baseline: baselineInlineDeclarationNameSet,
-        current: currentInlineDeclarationNameSet,
+        current: currentInlineDeclarationMap,
         kind: RuleMessageKind.InlineDeclarationNameSetMessage,
       };
       getSettings(context).reportInlineDeclarationNameSetMessage(message);

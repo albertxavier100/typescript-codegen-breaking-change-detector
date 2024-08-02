@@ -4,6 +4,7 @@ import { ParserServices } from '@typescript-eslint/parser';
 import type { ScopeManager } from '@typescript-eslint/scope-manager';
 import { TSESTree } from '@typescript-eslint/utils';
 import type { VisitorKeys } from '@typescript-eslint/visitor-keys';
+import { EnumDeclaration, InterfaceDeclaration, Node, TypeAliasDeclaration } from 'ts-morph';
 
 export interface ParseForESLintResult {
   ast: TSESTree.Program & {
@@ -30,11 +31,16 @@ export enum RuleMessageKind {
 }
 
 export interface InlineDeclarationNameSetMessage extends RuleMessage {
-  baseline: Set<string>;
-  current: Set<string>;
+  baseline: Map<string, NodeContext>;
+  current: Map<string, NodeContext>;
   kind: RuleMessageKind.InlineDeclarationNameSetMessage;
 }
 
 export interface LinterSettings {
   reportInlineDeclarationNameSetMessage(message: InlineDeclarationNameSetMessage): void;
+}
+
+export interface NodeContext {
+  node: InterfaceDeclaration | TypeAliasDeclaration | EnumDeclaration;
+  used: boolean;
 }

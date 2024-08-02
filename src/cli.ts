@@ -1,3 +1,4 @@
+import { InlineDeclarationNameSetMessage } from './azure/common/types';
 import { detectBreakingChangesBetweenPackages } from './azure/detect-breaking-changes';
 import { devConsolelog } from './utils/common-utils';
 import { program } from 'commander';
@@ -11,13 +12,23 @@ program
 const options = program.opts();
 
 async function run() {
-  const messages = await detectBreakingChangesBetweenPackages(
+  const messageMap = await detectBreakingChangesBetweenPackages(
     options.baselinePackageFolder,
     options.currentPackageFolder,
     options.tempFolder,
     options.cleanUpAtTheEnd ?? true
   );
-  devConsolelog('messages', messages);
+
+  messageMap.forEach((messages, apiView) => {
+    devConsolelog(
+      'current',
+      messages?.map((m) => (m as InlineDeclarationNameSetMessage).current.keys())
+    );
+    devConsolelog(
+      'baseline',
+      messages?.map((m) => (m as InlineDeclarationNameSetMessage).baseline.keys())
+    );
+  });
 }
 
 run();
